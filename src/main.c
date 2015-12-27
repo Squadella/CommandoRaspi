@@ -54,7 +54,16 @@ int main()
   {
     printf("Unable to open file, servoblaster may not be installed.\n");
     exit(-1);
-  }
-  listeningJoystick(joystick, fd);
+  }/*
+while(1)
+{
+  setNewServoAngle(79,fd);
+  usleep(100000);
+  setNewServoAngle(240,fd);
+  usleep(200000);
+  setNewServoAngle(79, fd);
+  usleep(200000);
+} */
+ listeningJoystick(joystick, fd);
   return 0;
 }

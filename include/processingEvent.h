@@ -1,5 +1,5 @@
 #ifndef TIME_DELAY
-#define TIME_DELAY 100
+#define TIME_DELAY 50
 #endif
 
 #ifndef PROCESSINGEV
@@ -16,7 +16,7 @@
 
 int convertAnalogToAngle(short analogValue);
 void setNewServoAngle(int angle, FILE *fd);
-void analogRecieve(unsigned int timePressed, short value, unsigned int* lastTime, FILE *servoblaster);
+void analogRecieve(unsigned int timePressed, short value, unsigned int* lastTime, FILE *servoblaster, int* unblock);
 void listeningJoystick(int joystick, FILE *servoblaster);
 
 #endif
