@@ -5,52 +5,39 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "processingEvent.h"
 
 int main()
 {
-  char servoNumber[3]={'0', '='};
+  char servoNumber[10];
+  strcpy(servoNumber, "echo 0=");
   char servoAngle[4];
-  char servoControl[7];
+  strcpy(servoAngle, "");
+  char retourLigne[2]={'\n'};
+  char path[20];
+  strcpy(path, ">/dev/servoblaster");
+  char servoControl[40];
   int manette=open("/dev/input/js0", O_RDONLY, O_NONBLOCK);
-  int servo1=open("/dev/servoblaster", O_WRONLY,O_NONBLOCK);
   int i;
   struct js_event event;
-  short valueOfButton;
-  unsigned char eventType;
-  unsigned char axisNumber;
+  fflush(NULL);
   while(1)
   {
     read(manette, &event, sizeof(event));
-    valueOfButton=event.value;
-    eventType=event.type;
-    axisNumber=event.number;
-    printf("%d, %d, %d\n", valueOfButton, eventType, axisNumber);
-    for(i=60; i<250; i++)
+    for(i=60; i<250; i+=10)
     {
       sprintf(servoAngle, "%d", i);
       strcat(servoControl, servoNumber);
       strcat(servoControl, servoAngle);
-      write(servo1, servoControl, 100);
+      strcat(servoControl, path);
+      strcat(servoControl, retourLigne);
       printf("%s", servoControl);
-      memset(servoControl,0,sizeof(servoControl));
-      printf("%s\n", servoControl);
+      system(servoControl);
+      strcpy(servoControl, "");
+      system(servoControl);
     }
-    /*switch (event.type)
-    {
-      case 2:
-        switch (event.number)
-        {
-          case 3:
-            joystickD(event);
-          case 4:
-            if(event.value<-170)
-            {
-              joystickD(event);
-            }
-        }
-    }*/
   }
   return 0;
 }

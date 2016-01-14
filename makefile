@@ -1,4 +1,4 @@
-CFLAGS=-Wall -Werror -std=gnu99
+CFLAGS=-Wall -Werror -std=gnu99 -g
 INCDIR=-I./include
 
 all: CommandoRaspi
