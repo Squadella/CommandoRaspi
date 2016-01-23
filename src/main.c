@@ -11,7 +11,14 @@
 
 int main()
 {
-  char servoNumber[10];
+  //Initialising controler
+  int manette=open("/dev/input/js0", O_RDONLY, O_NONBLOCK);
+  struct js_event event;
+  //Getting controler info
+  read(manette, &event, sizeof(event));
+
+  //Methode using echo for rotating servos
+  /*char servoNumber[10];
   strcpy(servoNumber, "echo 0=");
   char servoAngle[4];
   strcpy(servoAngle, "");
@@ -19,13 +26,10 @@ int main()
   char path[20];
   strcpy(path, ">/dev/servoblaster");
   char servoControl[40];
-  int manette=open("/dev/input/js0", O_RDONLY, O_NONBLOCK);
   int i;
-  struct js_event event;
   fflush(NULL);
   while(1)
   {
-    read(manette, &event, sizeof(event));
     for(i=60; i<250; i+=10)
     {
       sprintf(servoAngle, "%d", i);
@@ -39,5 +43,15 @@ int main()
       system(servoControl);
     }
   }
+  */
+  
+  //Methode using fopen and fprintf for using servos to be tested
+  FILE *fd;
+  fd = fopen("/dev/servoblaster","w");
+  if(fd==NULL)
+  {
+    printf("Unable to open file, servoblaster may not be installed.\n");
+  }
+  setNewServoAngle(150, fd);
   return 0;
 }
