@@ -12,10 +12,12 @@
 int main()
 {
   //Initialising controler
-  int manette=open("/dev/input/js0", O_RDONLY, O_NONBLOCK);
-  struct js_event event;
-  //Getting controler info
-  read(manette, &event, sizeof(event));
+  int joystick=open("/dev/input/js0", O_RDONLY, O_NONBLOCK);
+  if(joystick==-1)
+  {
+    printf("Check if the joystick is connected\n");
+    exit(-1);
+  }
 
   //Methode using echo for rotating servos
   /*char servoNumber[10];
@@ -44,14 +46,15 @@ int main()
     }
   }
   */
-  
+
   //Methode using fopen and fprintf for using servos to be tested
   FILE *fd;
   fd = fopen("/dev/servoblaster","w");
   if(fd==NULL)
   {
     printf("Unable to open file, servoblaster may not be installed.\n");
+    exit(-1);
   }
-  setNewServoAngle(150, fd);
+  listeningJoystick(joystick, fd);
   return 0;
 }
