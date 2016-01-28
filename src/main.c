@@ -19,51 +19,14 @@ int main()
     exit(-1);
   }
 
-  //Methode using echo for rotating servos
-  /*char servoNumber[10];
-  strcpy(servoNumber, "echo 0=");
-  char servoAngle[4];
-  strcpy(servoAngle, "");
-  char retourLigne[2]={'\n'};
-  char path[20];
-  strcpy(path, ">/dev/servoblaster");
-  char servoControl[40];
-  int i;
-  fflush(NULL);
-  while(1)
-  {
-    for(i=60; i<250; i+=10)
-    {
-      sprintf(servoAngle, "%d", i);
-      strcat(servoControl, servoNumber);
-      strcat(servoControl, servoAngle);
-      strcat(servoControl, path);
-      strcat(servoControl, retourLigne);
-      printf("%s", servoControl);
-      system(servoControl);
-      strcpy(servoControl, "");
-      system(servoControl);
-    }
-  }
-  */
-
-  //Methode using fopen and fprintf for using servos to be tested
+  //Opening the file for controling the first servo
   FILE *fd;
   fd = fopen("/dev/servoblaster","w");
   if(fd==NULL)
   {
     printf("Unable to open file, servoblaster may not be installed.\n");
     exit(-1);
-  }/*
-while(1)
-{
-  setNewServoAngle(79,fd);
-  usleep(100000);
-  setNewServoAngle(240,fd);
-  usleep(200000);
-  setNewServoAngle(79, fd);
-  usleep(200000);
-} */
- listeningJoystick(joystick, fd);
+  }
+  listeningJoystick(joystick, fd);
   return 0;
 }

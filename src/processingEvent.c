@@ -1,6 +1,10 @@
+/*!
+  @file processingEvent.c
+  @date 28 January 2016
+
+*/
 #include "processingEvent.h"
 
-///Used to convert the value returned by the analog to an angle for the servos.
 int convertAnalogToAngle(short analogValue)
 {
   int angle;
@@ -8,7 +12,6 @@ int convertAnalogToAngle(short analogValue)
   return angle;
 }
 
-///Used to feed the angle to the file controlling the servo.
 void setNewServoAngle(int angle, FILE *servoblaster)
 {
   fflush(servoblaster);
@@ -33,7 +36,6 @@ void analogRecieve(unsigned int timePressed, short value, unsigned int* lastTime
   setNewServoAngle(convertAnalogToAngle(value), servoblaster);
 }
 
-///Used to process all the entries on the joystick
 void listeningJoystick(int joystick, FILE *servoblaster)
 {
   //short isPlaying=0;
