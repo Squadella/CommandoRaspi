@@ -12,15 +12,15 @@ int convertAnalogToAngle(short analogValue)
   return angle;
 }
 
-void setNewServoAngle(int angle, FILE *servoblaster)
+void setNewServoAngle(int angle, FILE *servoblaster, char servoNumber, char modifier)
 {
   fflush(servoblaster);
   printf("%d\n", angle);
-  fprintf(servoblaster, "0=%d\n", angle);
+  fprintf(servoblaster, "%c=%c%d\n", servoNumber, modifier, angle);
   fflush(servoblaster);
 }
 
-void analogRecieve(unsigned int timePressed, short value, unsigned int* lastTime, FILE *servoblaster, int* unblock)
+void analogRecieve(unsigned int timePressed, short value, unsigned int* lastTime, FILE *servoblaster, int* unblock,  char servoNumber)
 {
   if(timePressed<(*(lastTime)+TIME_DELAY))
   {
@@ -33,15 +33,43 @@ void analogRecieve(unsigned int timePressed, short value, unsigned int* lastTime
     return;
   }
   *lastTime=timePressed;
-  setNewServoAngle(convertAnalogToAngle(value), servoblaster);
+  setNewServoAngle(convertAnalogToAngle(value), servoblaster, servoNumber, ' ');
+}
+
+void analogRecieveUp(unsigned int timePressed, short value,  unsigned int* lastTime, FILE *servoblaster, int* unblock,  char servoNumber)
+{
+  if(timePressed<(*(lastTime)+TIME_DELAY))
+  {
+    *unblock=*unblock+1;
+    if(*unblock>10)
+    {
+      *lastTime=0;
+      *unblock=0;
+    }
+    return;
+  }
+  if(value<0)
+  {
+    return;
+  }
+  setNewServoAngle(1, servoblaster, servoNumber, '+');
+}
+
+void buttonRecieveDown(short value, FILE *servoblaster,  char servoNumber)
+{
+  if(value!=1)
+  {
+    return;
+  }
+  setNewServoAngle(1, servoblaster, servoNumber, '-');
 }
 
 void listeningJoystick(int joystick, FILE *servoblaster)
 {
   //short isPlaying=0;
-  unsigned int lastTimeAnalog1=0/*, lastTimeAnalog2=0*/;
+  unsigned int lastTimeAnalog1=0, lastTimeAnalog2=0;
   struct js_event event;
-  int unblock=0;
+  int unblock=0, unblock2=0;
   while (1==1)
   {
     //Getting controler info
@@ -52,6 +80,7 @@ void listeningJoystick(int joystick, FILE *servoblaster)
       {
         //Right joystick (up and down)
         case 0:
+
         break;
 
         //Right joystick (right and left)
@@ -60,11 +89,12 @@ void listeningJoystick(int joystick, FILE *servoblaster)
 
         //Left trigger
         case 2:
+        analogRecieveUp(event.time, event.value,  &lastTimeAnalog2, servoblaster, &unblock2,  '1');
         break;
 
         //Left joystick controlling the laser turret (Up and down direction)
         case 3:
-        analogRecieve(event.time, event.value, &lastTimeAnalog1, servoblaster, &unblock);
+        analogRecieve(event.time, event.value, &lastTimeAnalog1, servoblaster, &unblock, '0');
         break;
 
         //Left joystick (right and left)
@@ -106,6 +136,7 @@ void listeningJoystick(int joystick, FILE *servoblaster)
 
         //Left button
         case 4:
+        buttonRecieveDown(event.value, servoblaster, '1');
         break;
 
         //Right button
