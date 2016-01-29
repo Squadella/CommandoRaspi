@@ -36,8 +36,22 @@ void analogRecieve(unsigned int timePressed, short value, unsigned int* lastTime
   setNewServoAngle(convertAnalogToAngle(value), servoblaster, servoNumber, ' ');
 }
 
-void processEvents(char eventUp, char eventDown, FILE *servoblaster)
+void processEvents(char eventUp, char eventDown, FILE *servoblaster, unsigned int nowTime, unsigned int* lastUpperServoMovement, int *unblockUpperServo)
 {
+  if(nowTime<(*(lastUpperServoMovement)+TIME_DELAY))
+  {
+    *unblockUpperServo=*unblockUpperServo+1;
+    if(*unblockUpperServo>10)
+    {
+      *lastUpperServoMovement=0;
+      *unblockUpperServo=0;
+    }
+    return;
+  }
+  if(((*lastUpperServoMovement)+TIME_DELAY) > nowTime)
+  {
+    return;
+  }
   if(eventUp && eventDown)
   {
     return;
@@ -46,15 +60,18 @@ void processEvents(char eventUp, char eventDown, FILE *servoblaster)
   {
     setNewServoAngle(1, servoblaster, '1', '+');
   }
-  else
+  else if(eventDown)
   {
     setNewServoAngle(1, servoblaster, '1', '-');
   }
+  *lastUpperServoMovement=nowTime;
 }
 
 void listeningJoystick(int joystick, FILE *servoblaster)
 {
   //short isPlaying=0;
+  unsigned int lastUpperServoMovement=0;
+  int unblockUpperServo=0;
   unsigned int lastTimeAnalog1=0;
   struct js_event event;
   int unblock=0;
@@ -141,6 +158,6 @@ void listeningJoystick(int joystick, FILE *servoblaster)
         break;
       }
     }
-    processEvents(servoUp, servoDown, servoblaster);
+    processEvents(servoUp, servoDown, servoblaster, event.time, &lastUpperServoMovement, &unblockUpperServo);
   }
 }

@@ -43,7 +43,7 @@ void setNewServoAngle(int angle, FILE *fd, char servoNumber, char modifier);
 ///Used to manage the axis input.
 void analogRecieve(unsigned int timePressed, short value, unsigned int* lastTime, FILE *servoblaster, int* unblock, char servoNumber);
 ///Processing all events at the end of the while.
-void processEvents(char eventUp, char eventDown, FILE *servoblaster);
+void processEvents(char eventUp, char eventDown, FILE *servoblaster, unsigned int nowTime, unsigned int* lastUpperServoMovement, int *unblockUpperServo);
 ///Used to process all the entries on the joystick.
 void listeningJoystick(int joystick, FILE *servoblaster);
 
