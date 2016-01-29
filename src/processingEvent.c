@@ -36,7 +36,7 @@ void analogRecieve(unsigned int timePressed, short value, unsigned int* lastTime
   setNewServoAngle(convertAnalogToAngle(value), servoblaster, servoNumber, ' ');
 }
 
-void analogRecieveUp(unsigned int timePressed, short value,  unsigned int* lastTime, FILE *servoblaster, int* unblock,  char servoNumber)
+void analogRecieveUpperServo(unsigned int timePressed, short value,  unsigned int* lastTime, FILE *servoblaster, int* unblock,  char servoNumber)
 {
   if(timePressed<(*(lastTime)+TIME_DELAY))
   {
@@ -78,39 +78,30 @@ void listeningJoystick(int joystick, FILE *servoblaster)
     {
       switch (event.number)
       {
+        //Left joystick (up and down)
+        case LEFT_JOYSTICK_VERTICAL:
+        break;
+
+        //Left joystick (right and left)
+        case LEFT_JOYSTICK_HORIZONTAL:
+        break;
+
         //Right joystick (up and down)
-        case 0:
-
-        break;
-
-        //Right joystick (right and left)
-        case 1:
-        break;
-
-        //Left trigger
-        case 2:
-        analogRecieveUp(event.time, event.value,  &lastTimeAnalog2, servoblaster, &unblock2,  '1');
-        break;
-
-        //Left joystick controlling the laser turret (Up and down direction)
-        case 3:
+        case RIGHT_JOYSTICK_VERTICAL:
         analogRecieve(event.time, event.value, &lastTimeAnalog1, servoblaster, &unblock, '0');
         break;
 
         //Left joystick (right and left)
-        case 4:
+        case RIGHT_JOYSTICK_HORIZONTAL:
+
         break;
 
-        //Right trigger
-        case 5:
+        //Vertical direction
+        case VERTICAL:
         break;
 
-        //Horizontal axis (left and right)
-        case 6:
-        break;
-
-        //Vertical axis (up and down)
-        case 7:
+        //Horizontal direction
+        case HORIZONTAL:
         break;
       }
     }
@@ -118,37 +109,46 @@ void listeningJoystick(int joystick, FILE *servoblaster)
     {
       switch (event.number)
       {
-        //The A button
-        case 0:
-        break;
-
-        //The B button
-        case 1:
-        break;
-
         //The X button
-        case 2:
+        case X:
+        break;
+
+        //The A button
+        case A:
         break;
 
         //The Y button
-        case 3:
+        case Y:
+        break;
+
+        //The B button
+        case B:
         break;
 
         //Left button
-        case 4:
-        buttonRecieveDown(event.value, servoblaster, '1');
+        case LB:
+        analogRecieveUpperServo(event.time, event.value,  &lastTimeAnalog2, servoblaster, &unblock2,  '1');
         break;
 
         //Right button
-        case 5:
+        case RB:
         break;
 
-        //Back button
-        case 6:
+        //Left trigger
+        case LT:
+        buttonRecieveDown(event.value, servoblaster, '1');
+        break;
+
+        //Right trigger
+        case RT:
         break;
 
         //Start button
-        case 7:
+        case START:
+        break;
+
+        //Back button
+        case BACK:
         break;
       }
     }
