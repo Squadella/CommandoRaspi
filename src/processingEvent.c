@@ -36,40 +36,29 @@ void analogRecieve(unsigned int timePressed, short value, unsigned int* lastTime
   setNewServoAngle(convertAnalogToAngle(value), servoblaster, servoNumber, ' ');
 }
 
-void analogRecieveUpperServo(unsigned int timePressed, short value,  unsigned int* lastTime, FILE *servoblaster, int* unblock,  char servoNumber)
+void processEvents(char eventUp, char eventDown, FILE *servoblaster)
 {
-  if(timePressed<(*(lastTime)+TIME_DELAY))
-  {
-    *unblock=*unblock+1;
-    if(*unblock>10)
-    {
-      *lastTime=0;
-      *unblock=0;
-    }
-    return;
-  }
-  if(value<0)
+  if(eventUp && eventDown)
   {
     return;
   }
-  setNewServoAngle(1, servoblaster, servoNumber, '+');
-}
-
-void buttonRecieveDown(short value, FILE *servoblaster,  char servoNumber)
-{
-  if(value!=1)
+  if(eventUp)
   {
-    return;
+    setNewServoAngle(1, servoblaster, '1', '+');
   }
-  setNewServoAngle(1, servoblaster, servoNumber, '-');
+  else
+  {
+    setNewServoAngle(1, servoblaster, '1', '-');
+  }
 }
 
 void listeningJoystick(int joystick, FILE *servoblaster)
 {
   //short isPlaying=0;
-  unsigned int lastTimeAnalog1=0, lastTimeAnalog2=0;
+  unsigned int lastTimeAnalog1=0;
   struct js_event event;
-  int unblock=0, unblock2=0;
+  int unblock=0;
+  char servoUp=0, servoDown=0;
   while (1==1)
   {
     //Getting controler info
@@ -127,7 +116,7 @@ void listeningJoystick(int joystick, FILE *servoblaster)
 
         //Left button
         case LB:
-        analogRecieveUpperServo(event.time, event.value,  &lastTimeAnalog2, servoblaster, &unblock2,  '1');
+        servoUp=event.value;
         break;
 
         //Right button
@@ -136,7 +125,7 @@ void listeningJoystick(int joystick, FILE *servoblaster)
 
         //Left trigger
         case LT:
-        buttonRecieveDown(event.value, servoblaster, '1');
+        servoDown=event.value;
         break;
 
         //Right trigger
@@ -152,5 +141,6 @@ void listeningJoystick(int joystick, FILE *servoblaster)
         break;
       }
     }
+    processEvents(servoUp, servoDown, servoblaster);
   }
 }

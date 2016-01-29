@@ -42,10 +42,8 @@ int convertAnalogToAngle(short analogValue);
 void setNewServoAngle(int angle, FILE *fd, char servoNumber, char modifier);
 ///Used to manage the axis input.
 void analogRecieve(unsigned int timePressed, short value, unsigned int* lastTime, FILE *servoblaster, int* unblock, char servoNumber);
-///Used to move the upper servo up.
-void analogRecieveUpperServo(unsigned int timePressed, short value,  unsigned int* lastTime, FILE *servoblaster, int* unblock,  char servoNumber);
-///Used to move down the upper servo.
-void buttonRecieveDown(short value, FILE *servoblaster,  char servoNumber);
+///Processing all events at the end of the while.
+void processEvents(char eventUp, char eventDown, FILE *servoblaster);
 ///Used to process all the entries on the joystick.
 void listeningJoystick(int joystick, FILE *servoblaster);
 
