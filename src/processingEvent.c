@@ -46,22 +46,80 @@ void listeningJoystick(int joystick, FILE *servoblaster)
   {
     //Getting controler info
     read(joystick, &event, sizeof(event));
-    switch (event.type)
+    if(event.type==2)
     {
-      case 2:
       switch (event.number)
       {
+        //Right joystick (up and down)
+        case 0:
+        break;
+
+        //Right joystick (right and left)
+        case 1:
+        break;
+
+        //Left trigger
+        case 2:
+        break;
+
+        //Left joystick controlling the laser turret (Up and down direction)
         case 3:
         analogRecieve(event.time, event.value, &lastTimeAnalog1, servoblaster, &unblock);
         break;
-        case 4:
-        if(event.value<-170)
-        {
 
-        }
+        //Left joystick (right and left)
+        case 4:
+        break;
+
+        //Right trigger
+        case 5:
+        break;
+
+        //Horizontal axis (left and right)
+        case 6:
+        break;
+
+        //Vertical axis (up and down)
+        case 7:
         break;
       }
-      break;
+    }
+    else
+    {
+      switch (event.number)
+      {
+        //The A button
+        case 0:
+        break;
+
+        //The B button
+        case 1:
+        break;
+
+        //The X button
+        case 2:
+        break;
+
+        //The Y button
+        case 3:
+        break;
+
+        //Left button
+        case 4:
+        break;
+
+        //Right button
+        case 5:
+        break;
+
+        //Back button
+        case 6:
+        break;
+
+        //Start button
+        case 7:
+        break;
+      }
     }
   }
 }
