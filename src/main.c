@@ -12,7 +12,7 @@
 int main()
 {
   //Initialising controler
-  int joystick=open("/dev/input/js0", O_RDONLY, O_NONBLOCK);
+  int joystick=open("/dev/input/js0", O_RDONLY | O_NONBLOCK);
   if(joystick==-1)
   {
     printf("Check if the joystick is connected\n");

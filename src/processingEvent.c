@@ -59,12 +59,13 @@ void processEvents(char eventUp, char eventDown, FILE *servoblaster, unsigned in
   if(eventUp)
   {
     setNewServoAngle(1, servoblaster, '1', '+');
+    *lastUpperServoMovement=nowTime;
   }
   else if(eventDown)
   {
     setNewServoAngle(1, servoblaster, '1', '-');
+    *lastUpperServoMovement=nowTime;
   }
-  *lastUpperServoMovement=nowTime;
 }
 
 void listeningJoystick(int joystick, FILE *servoblaster)

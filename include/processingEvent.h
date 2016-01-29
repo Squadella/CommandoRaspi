@@ -5,7 +5,7 @@
 */
 #ifndef TIME_DELAY
 ///TIME_DELAY is used for setting the time interval between two refreshing of the servo.
-#define TIME_DELAY 50
+#define TIME_DELAY 100
 #define X 0
 #define A 1
 #define Y 2
