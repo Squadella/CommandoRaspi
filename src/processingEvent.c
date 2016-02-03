@@ -20,6 +20,7 @@ void setNewServoAngle(int angle, FILE *servoblaster, char servoNumber, char modi
   fflush(servoblaster);
 }
 
+
 void analogRecieve(unsigned int timePressed, short value, unsigned int* lastTime, FILE *servoblaster, int* unblock,  char servoNumber)
 {
   if(timePressed<(*(lastTime)+TIME_DELAY))
@@ -68,15 +69,85 @@ void processEvents(char eventUp, char eventDown, FILE *servoblaster, unsigned in
   }
 }
 
+void openMicrophone(snd_pcm_t *captureHandle)
+{
+  snd_pcm_hw_params_t *hwParams;
+  unsigned int rate = 44100;
+  if((snd_pcm_open(&captureHandle, "hw:0", SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK))<0)
+  {
+    printf("Fail opening the microphone.\n");
+    exit(-1);
+  }
+  if(snd_pcm_hw_params_malloc(&hwParams)<0)
+  {
+    printf("Can't allocate parameters structure.\n");
+    exit(-1);
+  }
+  if(snd_pcm_hw_params_any(captureHandle, hwParams)<0)
+  {
+    printf("Can't configure hardware.\n");
+    exit(-1);
+  }
+  if(snd_pcm_hw_params_set_access(captureHandle, hwParams, SND_PCM_ACCESS_RW_INTERLEAVED)<0)
+  {
+    printf("Can't set the access type.\n");
+    exit(-1);
+  }
+  if(snd_pcm_hw_params_set_format(captureHandle, hwParams, SND_PCM_FORMAT_S16_LE)<0)
+  {
+    printf("Can't set the capture format.\n");
+    exit(-1);
+  }
+  if(snd_pcm_hw_params_set_rate_near(captureHandle, hwParams, &rate, 0)<0)
+  {
+    printf("Can't set the sample rate.\n");
+    exit(-1);
+  }
+  if(snd_pcm_hw_params_set_channels(captureHandle, hwParams, 1)<0)
+  {
+    printf("Can't set the channel number\n");
+    exit(-1);
+  }
+  if(snd_pcm_hw_params(captureHandle, hwParams)<0)
+  {
+    printf("Failed to apply parameters.\n");
+    exit(-1);
+  }
+  snd_pcm_hw_params_free(hwParams);
+  if(snd_pcm_prepare(captureHandle)<0)
+  {
+    printf("Can't prepare the audio interface.\n");
+    exit(-1);
+  }
+}
+
+int16_t checkSoundLevel(snd_pcm_t *captureHandle)
+{
+  int16_t buf[2];
+  snd_pcm_readi(captureHandle, buf, 2);
+  return buf[0];
+}
+
+int vehicleTouched(snd_pcm_t *captureHandle)
+{
+  if(abs(checkSoundLevel(captureHandle))>STEPVALUE)
+  {
+    return 1;
+  }
+  return 0;
+}
+
 void listeningJoystick(int joystick, FILE *servoblaster)
 {
   //short isPlaying=0;
+  snd_pcm_t *captureHandle;
   unsigned int lastUpperServoMovement=0;
   int unblockUpperServo=0;
   unsigned int lastTimeAnalog1=0;
   struct js_event event;
   int unblock=0;
   char servoUp=0, servoDown=0;
+  openMicrophone(captureHandle);
   while (1==1)
   {
     //Getting controler info
@@ -160,5 +231,9 @@ void listeningJoystick(int joystick, FILE *servoblaster)
       }
     }
     processEvents(servoUp, servoDown, servoblaster, event.time, &lastUpperServoMovement, &unblockUpperServo);
+    if(vehicleTouched(captureHandle)==1)
+    {
+      printf("touched!\n");
+    }
   }
 }

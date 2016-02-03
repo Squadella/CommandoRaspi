@@ -1,6 +1,6 @@
 {
   "execPath": "/usr/bin/g++",
-  "gccDefaultCFlags": "-Wall -fsyntax-only --std=gnu99",
+  "gccDefaultCFlags": "-Wall -fsyntax-only --std=gnu99 -lasound",
   "gccErrorLimit": 0,
   "gccIncludePaths": "./include",
   "gccSuppressWarnings": false

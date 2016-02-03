@@ -6,11 +6,13 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <alsa/asoundlib.h>
 
 #include "processingEvent.h"
 
 int main()
 {
+  /*
   //Initialising controler
   int joystick=open("/dev/input/js0", O_RDONLY | O_NONBLOCK);
   if(joystick==-1)
@@ -27,6 +29,8 @@ int main()
     printf("Unable to open file, servoblaster may not be installed.\n");
     exit(-1);
   }
-  listeningJoystick(joystick, fd);
+  */
+  openMicrophone();
+  //listeningJoystick(joystick, fd);
   return 0;
 }
