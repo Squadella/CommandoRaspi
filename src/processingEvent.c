@@ -69,85 +69,100 @@ void processEvents(char eventUp, char eventDown, FILE *servoblaster, unsigned in
   }
 }
 
-void openMicrophone(snd_pcm_t *captureHandle)
+int openMicrophone()
 {
-  snd_pcm_hw_params_t *hwParams;
-  unsigned int rate = 44100;
-  if((snd_pcm_open(&captureHandle, "hw:0", SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK))<0)
+  FILE *fd;
+  fd = fopen("tourbicouille","w");
+  int size;
+  snd_pcm_t *handle;
+  snd_pcm_hw_params_t *params;
+  unsigned int val=44100;
+  snd_pcm_uframes_t frames=32;
+  int dir;
+  int rc;
+  int16_t temp2;
+  char *buffer;
+  rc=snd_pcm_open(&handle, "hw:1", SND_PCM_STREAM_CAPTURE, 0);
+  if(rc<0)
   {
-    printf("Fail opening the microphone.\n");
-    exit(-1);
+    printf("Unable to open pcm device : %s\n", snd_strerror(rc));
+    exit(1);
   }
-  if(snd_pcm_hw_params_malloc(&hwParams)<0)
+  /* Allocate a hardware parameters object. */
+  snd_pcm_hw_params_alloca(&params);
+  /* Fill it in with default values. */
+  snd_pcm_hw_params_any(handle, params);
+  /* Set the desired hardware parameters. */
+  /* Interleaved mode */
+  snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
+  /* Signed 16-bit little-endian format */
+  snd_pcm_hw_params_set_format(handle, params, SND_PCM_FORMAT_S16_LE);
+  /* Two channels (stereo) */
+  snd_pcm_hw_params_set_channels(handle, params, 2);
+  /* 44100 bits/second sampling rate (CD quality) */
+  snd_pcm_hw_params_set_rate_near(handle, params, &val, &dir);
+  /* Set period size to 32 frames. */
+  snd_pcm_hw_params_set_period_size_near(handle, params, &frames, &dir);
+  /* Write the parameters to the driver */
+  rc = snd_pcm_hw_params(handle, params);
+  if (rc < 0)
   {
-    printf("Can't allocate parameters structure.\n");
-    exit(-1);
+    printf("unable to set hw parameters: %s\n", snd_strerror(rc));
+    exit(1);
   }
-  if(snd_pcm_hw_params_any(captureHandle, hwParams)<0)
+  snd_pcm_hw_params_get_period_size(params, &frames, &dir);
+
+  size=frames*4; //2 bytes 1 channel
+  buffer=(char*)malloc(size);
+
+  snd_pcm_hw_params_get_period_time(params, &val, &dir);
+  int loop=1000;
+  while(loop!=0)
   {
-    printf("Can't configure hardware.\n");
-    exit(-1);
+    rc = snd_pcm_readi(handle, buffer, frames);
+    if (rc == -EPIPE)
+    {
+      /* EPIPE means overrun */
+      printf("overrun occurred\n");
+      snd_pcm_prepare(handle);
+    }
+    else if (rc < 0)
+    {
+      printf("error from read: %s\n", snd_strerror(rc));
+    }
+    else if (rc != (int)frames)
+    {
+      printf("short read, read %d frames\n", rc);
+    }
+    temp2 = (buffer[0]<<8)+buffer[1];
+    fprintf(fd, "%d;", temp2);
+    loop--;
   }
-  if(snd_pcm_hw_params_set_access(captureHandle, hwParams, SND_PCM_ACCESS_RW_INTERLEAVED)<0)
-  {
-    printf("Can't set the access type.\n");
-    exit(-1);
-  }
-  if(snd_pcm_hw_params_set_format(captureHandle, hwParams, SND_PCM_FORMAT_S16_LE)<0)
-  {
-    printf("Can't set the capture format.\n");
-    exit(-1);
-  }
-  if(snd_pcm_hw_params_set_rate_near(captureHandle, hwParams, &rate, 0)<0)
-  {
-    printf("Can't set the sample rate.\n");
-    exit(-1);
-  }
-  if(snd_pcm_hw_params_set_channels(captureHandle, hwParams, 1)<0)
-  {
-    printf("Can't set the channel number\n");
-    exit(-1);
-  }
-  if(snd_pcm_hw_params(captureHandle, hwParams)<0)
-  {
-    printf("Failed to apply parameters.\n");
-    exit(-1);
-  }
-  snd_pcm_hw_params_free(hwParams);
-  if(snd_pcm_prepare(captureHandle)<0)
-  {
-    printf("Can't prepare the audio interface.\n");
-    exit(-1);
-  }
+
+  snd_pcm_drain(handle);
+  snd_pcm_close(handle);
+  free(buffer);
+  return 0;
 }
 
 int16_t checkSoundLevel(snd_pcm_t *captureHandle)
 {
-  int16_t buf[2];
-  snd_pcm_readi(captureHandle, buf, 2);
-  return buf[0];
+  return 0;
 }
 
 int vehicleTouched(snd_pcm_t *captureHandle)
 {
-  if(abs(checkSoundLevel(captureHandle))>STEPVALUE)
-  {
-    return 1;
-  }
   return 0;
 }
 
 void listeningJoystick(int joystick, FILE *servoblaster)
 {
-  //short isPlaying=0;
-  snd_pcm_t *captureHandle;
   unsigned int lastUpperServoMovement=0;
   int unblockUpperServo=0;
   unsigned int lastTimeAnalog1=0;
   struct js_event event;
   int unblock=0;
   char servoUp=0, servoDown=0;
-  openMicrophone(captureHandle);
   while (1==1)
   {
     //Getting controler info
@@ -231,9 +246,5 @@ void listeningJoystick(int joystick, FILE *servoblaster)
       }
     }
     processEvents(servoUp, servoDown, servoblaster, event.time, &lastUpperServoMovement, &unblockUpperServo);
-    if(vehicleTouched(captureHandle)==1)
-    {
-      printf("touched!\n");
-    }
   }
 }

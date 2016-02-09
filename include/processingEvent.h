@@ -28,6 +28,9 @@
 #ifndef PROCESSINGEV
 #define PROCESSINGEV
 
+/* Use the newer ALSA API */
+#define ALSA_PCM_NEW_HW_PARAMS_API
+
 #include <linux/joystick.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -47,7 +50,7 @@ void analogRecieve(unsigned int timePressed, short value, unsigned int* lastTime
 ///Processing all events at the end of the while.
 void processEvents(char eventUp, char eventDown, FILE *servoblaster, unsigned int nowTime, unsigned int* lastUpperServoMovement, int *unblockUpperServo);
 ///Open the microphone.
-void openMicrophone();
+int openMicrophone();
 ///Used to process all the entries on the joystick.
 void listeningJoystick(int joystick, FILE *servoblaster);
 
