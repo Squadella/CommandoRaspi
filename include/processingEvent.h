@@ -58,7 +58,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <alsa/asoundlib.h>
+#include <wiringPi.h>
 
+///Function for activating the laser connected to a gpio pin.
+void activateLaser();
 ///Used to convert the value returned by the analog to an angle for the servos.
 int convertAnalogToAngle(short analogValue/*!<The value returned by the axis.*/);
 ///Used to feed the angle to the file controlling the servo.

@@ -5,6 +5,27 @@
 */
 #include "processingEvent.h"
 
+void setupLaser()
+{
+  if(wiringPiSetup()==-1)
+  {
+    printf("failed to open the gpio pins\n");
+    exit(-1);
+  }
+
+  pinMode(0, OUTPUT); //CHOISIR LA BONNE PIN
+}
+
+void activateLaser()
+{
+  digitalWrite(0,1);
+}
+
+void desactivateLaser()
+{
+  digitalWrite(0,0);
+}
+
 int convertAnalogToAngle(short analogValue)
 {
   int angle;
@@ -157,12 +178,12 @@ int vehicleTouched(snd_pcm_t *captureHandle)
 
 void listeningJoystick(int joystick, FILE *servoblaster)
 {
-  unsigned int lastUpperServoMovement=0;
+  pid_t pid;
+  unsigned int lastUpperServoMovement=0, lastTimeAnalog1=0, lastTimeFired=0;
   int unblockUpperServo=0;
-  unsigned int lastTimeAnalog1=0;
   struct js_event event;
   int unblock=0;
-  char servoUp=0, servoDown=0;
+  char servoUp=0, servoDown=0, eventFire=0;
   while (1==1)
   {
     //Getting controler info
@@ -208,6 +229,17 @@ void listeningJoystick(int joystick, FILE *servoblaster)
 
         //The A button
         case A:
+        if(event.value==1 && (lastTimeFired+1000)<event.time)
+        {
+          pid = fork();
+          if(pid==0)
+          {
+            digitalWrite(0,1);
+            //TEST NE JE NE SAIS PAS SI CA FOINCTIONNE
+            sleep(1);
+            digitalWrite(0,0);
+          }
+        }
         break;
 
         //The Y button
@@ -246,5 +278,6 @@ void listeningJoystick(int joystick, FILE *servoblaster)
       }
     }
     processEvents(servoUp, servoDown, servoblaster, event.time, &lastUpperServoMovement, &unblockUpperServo);
+
   }
 }
