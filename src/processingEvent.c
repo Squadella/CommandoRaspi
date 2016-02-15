@@ -16,16 +16,6 @@ void setupLaser()
   pinMode(0, OUTPUT); //CHOISIR LA BONNE PIN
 }
 
-void activateLaser()
-{
-  digitalWrite(0,1);
-}
-
-void desactivateLaser()
-{
-  digitalWrite(0,0);
-}
-
 int convertAnalogToAngle(short analogValue)
 {
   int angle;
@@ -235,7 +225,7 @@ void listeningJoystick(int joystick, FILE *servoblaster)
           if(pid==0)
           {
             digitalWrite(0,1);
-            //TEST NE JE NE SAIS PAS SI CA FOINCTIONNE
+            //TEST NE JE NE SAIS PAS SI CA FONCTIONNE
             sleep(1);
             digitalWrite(0,0);
           }
@@ -251,16 +241,16 @@ void listeningJoystick(int joystick, FILE *servoblaster)
         break;
 
         //Left button
-        case LB:
+        case LB: //Make the upper servo go up
         servoUp=event.value;
         break;
 
         //Right button
-        case RB:
+        case RB: //Used for activating motors
         break;
 
         //Left trigger
-        case LT:
+        case LT: //Make upper servo go down
         servoDown=event.value;
         break;
 
@@ -278,6 +268,5 @@ void listeningJoystick(int joystick, FILE *servoblaster)
       }
     }
     processEvents(servoUp, servoDown, servoblaster, event.time, &lastUpperServoMovement, &unblockUpperServo);
-
   }
 }
