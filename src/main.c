@@ -12,7 +12,6 @@
 
 int main()
 {
-  /*
   //Initialising controler
   int joystick=open("/dev/input/js0", O_RDONLY | O_NONBLOCK);
   if(joystick==-1)
@@ -29,8 +28,8 @@ int main()
     printf("Unable to open file, servoblaster may not be installed.\n");
     exit(-1);
   }
-  */
-  openMicrophone();
-  //listeningJoystick(joystick, fd);
+
+  //openMicrophone();
+  listeningJoystick(joystick, fd);
   return 0;
 }

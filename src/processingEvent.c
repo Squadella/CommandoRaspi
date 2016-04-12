@@ -4,7 +4,7 @@
 
 */
 #include "processingEvent.h"
-
+/*
 void setupLaser()
 {
   if(wiringPiSetup()==-1)
@@ -15,7 +15,7 @@ void setupLaser()
 
   pinMode(0, OUTPUT); //CHOISIR LA BONNE PIN
 }
-
+*/
 int convertAnalogToAngle(short analogValue)
 {
   int angle;
@@ -168,105 +168,46 @@ int vehicleTouched(snd_pcm_t *captureHandle)
 
 void listeningJoystick(int joystick, FILE *servoblaster)
 {
-  pid_t pid;
-  unsigned int lastUpperServoMovement=0, lastTimeAnalog1=0, lastTimeFired=0;
-  int unblockUpperServo=0;
   struct js_event event;
-  int unblock=0;
-  char servoUp=0, servoDown=0, eventFire=0;
-  while (1==1)
+  int unblock=0, unblockUpperServo=0;
+  __u32 lastTimeAnalog1=0, lastUpperServoMovement=0;
+  __s16 eventUp=0, eventDown=0;
+
+  while(1==1)
   {
-    //Getting controler info
-    read(joystick, &event, sizeof(event));
-    if(event.type==2)
+    read(joystick, &event, sizeof(struct js_event));
+    switch (event.type)
     {
+      //Button
+      case 1:
       switch (event.number)
       {
-        //Left joystick (up and down)
-        case LEFT_JOYSTICK_VERTICAL:
-        break;
-
-        //Left joystick (right and left)
-        case LEFT_JOYSTICK_HORIZONTAL:
-        break;
-
-        //Right joystick (up and down)
-        case RIGHT_JOYSTICK_VERTICAL:
-        analogRecieve(event.time, event.value, &lastTimeAnalog1, servoblaster, &unblock, '0');
-        break;
-
-        //Left joystick (right and left)
-        case RIGHT_JOYSTICK_HORIZONTAL:
-
-        break;
-
-        //Vertical direction
-        case VERTICAL:
-        break;
-
-        //Horizontal direction
-        case HORIZONTAL:
-        break;
+        //Upper left trigger
+        case 4:
+          eventUp=event.value;
+          break;
+        //Lower left trigger
+        case 6:
+          eventDown=event.value;
+          break;
       }
-    }
-    else
-    {
+      break;
+
+      //Analogic
+      case 2:
       switch (event.number)
       {
-        //The X button
-        case X:
-        break;
+        //Right axis left/right
+        case 2:
+          analogRecieve(event.time, event.value, &lastTimeAnalog1, servoblaster, &unblock, '0');
+          break;
+        //Right axis up/down
+        case 3:
 
-        //The A button
-        case A:
-        if(event.value==1 && (lastTimeFired+1000)<event.time)
-        {
-          pid = fork();
-          if(pid==0)
-          {
-            digitalWrite(0,1);
-            //TEST NE JE NE SAIS PAS SI CA FONCTIONNE
-            sleep(1);
-            digitalWrite(0,0);
-          }
-        }
-        break;
-
-        //The Y button
-        case Y:
-        break;
-
-        //The B button
-        case B:
-        break;
-
-        //Left button
-        case LB: //Make the upper servo go up
-        servoUp=event.value;
-        break;
-
-        //Right button
-        case RB: //Used for activating motors
-        break;
-
-        //Left trigger
-        case LT: //Make upper servo go down
-        servoDown=event.value;
-        break;
-
-        //Right trigger
-        case RT:
-        break;
-
-        //Start button
-        case START:
-        break;
-
-        //Back button
-        case BACK:
-        break;
+          break;
       }
+      break;
     }
-    processEvents(servoUp, servoDown, servoblaster, event.time, &lastUpperServoMovement, &unblockUpperServo);
+    processEvents(eventUp, eventDown, servoblaster, event.time, &lastUpperServoMovement, &unblockUpperServo);
   }
 }

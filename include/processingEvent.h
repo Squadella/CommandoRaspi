@@ -58,7 +58,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <alsa/asoundlib.h>
-#include <wiringPi.h>
+//#include <wiringPi.h>
 
 ///Initialise the gpio pin for the laser.
 void setupLaser();
