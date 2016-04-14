@@ -80,19 +80,14 @@ void processEvents(char eventUp, char eventDown, FILE *servoblaster, unsigned in
   }
 }
 
-int openMicrophone()
+void openMicrophone(snd_pcm_t **captureHandle)
 {
-  FILE *fd;
-  fd = fopen("tourbicouille","w");
-  int size;
   snd_pcm_t *handle;
   snd_pcm_hw_params_t *params;
   unsigned int val=44100;
   snd_pcm_uframes_t frames=32;
   int dir;
   int rc;
-  int16_t temp2;
-  char *buffer;
   rc=snd_pcm_open(&handle, "hw:1", SND_PCM_STREAM_CAPTURE, 0);
   if(rc<0)
   {
@@ -123,42 +118,35 @@ int openMicrophone()
   }
   snd_pcm_hw_params_get_period_size(params, &frames, &dir);
 
-  size=frames*4; //2 bytes 1 channel
-  buffer=(char*)malloc(size);
-
   snd_pcm_hw_params_get_period_time(params, &val, &dir);
-  int loop=1000;
-  while(loop!=0)
-  {
-    rc = snd_pcm_readi(handle, buffer, frames);
-    if (rc == -EPIPE)
-    {
-      /* EPIPE means overrun */
-      printf("overrun occurred\n");
-      snd_pcm_prepare(handle);
-    }
-    else if (rc < 0)
-    {
-      printf("error from read: %s\n", snd_strerror(rc));
-    }
-    else if (rc != (int)frames)
-    {
-      printf("short read, read %d frames\n", rc);
-    }
-    temp2 = (buffer[0]<<8)+buffer[1];
-    fprintf(fd, "%d;", temp2);
-    loop--;
-  }
-
-  snd_pcm_drain(handle);
-  snd_pcm_close(handle);
-  free(buffer);
-  return 0;
+  *captureHandle=handle;
 }
 
-int16_t checkSoundLevel(snd_pcm_t *captureHandle)
+int16_t checkSoundLevel(snd_pcm_t *handle)
 {
-  return 0;
+  int rc, size;
+  char *buffer;
+  int16_t temp2=0;
+  snd_pcm_uframes_t frames=32;
+  size=frames*4; //2 bytes 1 channel
+  buffer=(char*)malloc(size);
+  rc = snd_pcm_readi(handle, buffer, frames);
+  if (rc == -EPIPE)
+  {
+    /* EPIPE means overrun */
+    printf("overrun occurred\n");
+    snd_pcm_prepare(handle);
+  }
+  else if (rc < 0)
+  {
+    printf("error from read: %s\n", snd_strerror(rc));
+  }
+  else if (rc != (int)frames)
+  {
+    printf("short read, read %d frames\n", rc);
+  }
+  temp2 = (buffer[0]<<8)+buffer[1];
+  return temp2;
 }
 
 int vehicleTouched(snd_pcm_t *captureHandle)

@@ -84,7 +84,9 @@ void processEvents(char eventUp/*!<Flag Flag that allows us to tell if the user 
                    unsigned int* lastUpperServoMovement/*!<The last time same button has been pressed.*/,
                    int *unblockUpperServo/*!<Value for unstucking the loop.*/);
 ///Open and read the microphone.
-int openMicrophone();
+void openMicrophone(snd_pcm_t **captureHandle);
+///Return the value of the microphone.
+int16_t checkSoundLevel(snd_pcm_t *handle);
 ///Used to process all the entries on the joystick.
 void listeningJoystick(int joystick/*!<File descriptor of the joystick device file.*/,
                        FILE *servoblaster/*!<File descriptor of the servoblaster pseudo file.*/);

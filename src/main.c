@@ -29,7 +29,12 @@ int main()
     exit(-1);
   }
 
-  //openMicrophone();
-  listeningJoystick(joystick, fd);
+  //Initialisong the microphone levels and unmuting it. HAS TO BE SET TO THE RASPI AUDIO IN.
+  system("amixer -c 2 set Mic playback 100% unmute");
+
+  snd_pcm_t *test;
+  openMicrophone(&test);
+  checkSoundLevel(test);
+  //listeningJoystick(joystick, fd);
   return 0;
 }
