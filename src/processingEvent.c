@@ -88,7 +88,7 @@ void openMicrophone(snd_pcm_t **captureHandle)
   snd_pcm_uframes_t frames=32;
   int dir;
   int rc;
-  rc=snd_pcm_open(&handle, "hw:1", SND_PCM_STREAM_CAPTURE, 0);
+  rc=snd_pcm_open(&handle, "hw:2", SND_PCM_STREAM_CAPTURE, 0);
   if(rc<0)
   {
     printf("Unable to open pcm device : %s\n", snd_strerror(rc));
@@ -147,6 +147,62 @@ int16_t checkSoundLevel(snd_pcm_t *handle)
   }
   temp2 = (buffer[0]<<8)+buffer[1];
   return temp2;
+}
+
+void getMaxValueOfMicrophone(snd_pcm_t *handle)
+{
+  int loop=1000, rc, size;
+  int max=0;
+  char *buffer;
+  snd_pcm_uframes_t frames=32;
+  size=frames*4; //2 bytes 1 channel
+  buffer=(char*)malloc(size);
+  printf("%lu\n", sizeof(int));
+  while(loop!=0)
+  {
+    rc = snd_pcm_readi(handle, buffer, frames);
+    if (rc == -EPIPE)
+    {
+      /* EPIPE means overrun */
+      printf("overrun occurred\n");
+      snd_pcm_prepare(handle);
+    }
+    else if (rc < 0)
+    {
+      printf("error from read: %s\n", snd_strerror(rc));
+    }
+    else if (rc != (int)frames)
+    {
+      printf("short read, read %d frames\n", rc);
+    }
+    loop--;
+  }
+  loop=10000;
+  while(loop!=0)
+  {
+    rc = snd_pcm_readi(handle, buffer, frames);
+    if (rc == -EPIPE)
+    {
+      /* EPIPE means overrun */
+      printf("overrun occurred\n");
+      snd_pcm_prepare(handle);
+    }
+    else if (rc < 0)
+    {
+      printf("error from read: %s\n", snd_strerror(rc));
+    }
+    else if (rc != (int)frames)
+    {
+      printf("short read, read %d frames\n", rc);
+    }
+    printf("tmp2 = %d\n", *buffer);
+    if(*buffer>max)
+    {
+      max=*buffer;
+    }
+    loop--;
+  }
+  printf("max = %d\n", max);
 }
 
 int vehicleTouched(snd_pcm_t *captureHandle)

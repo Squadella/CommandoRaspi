@@ -35,6 +35,7 @@ int main()
   snd_pcm_t *test;
   openMicrophone(&test);
   checkSoundLevel(test);
+  getMaxValueOfMicrophone(test);
   //listeningJoystick(joystick, fd);
   return 0;
 }
