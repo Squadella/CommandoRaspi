@@ -84,7 +84,7 @@ void openMicrophone(snd_pcm_t **captureHandle)
 {
   snd_pcm_t *handle;
   snd_pcm_hw_params_t *params;
-  unsigned int val=44100;
+  unsigned int val=48000;
   snd_pcm_uframes_t frames=32;
   int dir;
   int rc;
@@ -104,7 +104,7 @@ void openMicrophone(snd_pcm_t **captureHandle)
   /* Signed 16-bit little-endian format */
   snd_pcm_hw_params_set_format(handle, params, SND_PCM_FORMAT_S16_LE);
   /* Two channels (stereo) */
-  snd_pcm_hw_params_set_channels(handle, params, 2);
+  snd_pcm_hw_params_set_channels(handle, params, 1);
   /* 44100 bits/second sampling rate (CD quality) */
   snd_pcm_hw_params_set_rate_near(handle, params, &val, &dir);
   /* Set period size to 32 frames. */
@@ -125,11 +125,10 @@ void openMicrophone(snd_pcm_t **captureHandle)
 int16_t checkSoundLevel(snd_pcm_t *handle)
 {
   int rc, size;
-  char *buffer;
   int16_t temp2=0;
-  snd_pcm_uframes_t frames=32;
-  size=frames*4; //2 bytes 1 channel
-  buffer=(char*)malloc(size);
+  short buffer[8*1024];
+  size=sizeof(buffer)>>1;
+  snd_pcm_uframes_t frames=size;
   rc = snd_pcm_readi(handle, buffer, frames);
   if (rc == -EPIPE)
   {
@@ -149,15 +148,26 @@ int16_t checkSoundLevel(snd_pcm_t *handle)
   return temp2;
 }
 
+double rms(short *buffer, int buffer_size)
+{
+	int i;
+	long int square_sum = 0.0;
+	for(i=0; i<buffer_size; i++)
+		square_sum += (buffer[i] * buffer[i]);
+
+	double result = sqrt(square_sum/buffer_size);
+	return result;
+}
+
 void getMaxValueOfMicrophone(snd_pcm_t *handle)
 {
-  int loop=1000, rc, size;
+  int loop=1000, rc, size, dB;
+  double tmp;
   int max=0;
-  char *buffer;
-  snd_pcm_uframes_t frames=32;
-  size=frames*4; //2 bytes 1 channel
-  buffer=(char*)malloc(size);
-  printf("%lu\n", sizeof(int));
+  short buffer[8*1024];
+  size=sizeof(buffer)>>1; //2 bytes 1 channel
+  snd_pcm_uframes_t frames=size;
+  loop=1000;
   while(loop!=0)
   {
     rc = snd_pcm_readi(handle, buffer, frames);
@@ -175,31 +185,16 @@ void getMaxValueOfMicrophone(snd_pcm_t *handle)
     {
       printf("short read, read %d frames\n", rc);
     }
-    loop--;
-  }
-  loop=10000;
-  while(loop!=0)
-  {
-    rc = snd_pcm_readi(handle, buffer, frames);
-    if (rc == -EPIPE)
+    printf("tmp2 = %d\n", buffer[0]);
+    tmp=rms(buffer, size);
+    dB = (int)20*log10(tmp);
+    printf("%d\n", dB);
+    if(dB>max)
     {
-      /* EPIPE means overrun */
-      printf("overrun occurred\n");
-      snd_pcm_prepare(handle);
+      printf("%d max dB\n", dB);
+      max=dB;
     }
-    else if (rc < 0)
-    {
-      printf("error from read: %s\n", snd_strerror(rc));
-    }
-    else if (rc != (int)frames)
-    {
-      printf("short read, read %d frames\n", rc);
-    }
-    printf("tmp2 = %d\n", *buffer);
-    if(*buffer>max)
-    {
-      max=*buffer;
-    }
+    fflush(stdout);
     loop--;
   }
   printf("max = %d\n", max);
