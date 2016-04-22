@@ -60,7 +60,7 @@
 #include <alsa/asoundlib.h>
 #include <math.h>
 #include <pthread.h>
-//#include <wiringPi.h>
+#include <wiringPi.h>
 
 ///Flag for knowing the laser status.
 int canBeFired;
@@ -70,6 +70,8 @@ int touchedByLaser;
 int remainingAmmo;
 ///Flag for knowing if the raspi is reloading.
 int isReloading;
+
+int score;
 
 
 ///Initialise the gpio pin for the laser.
@@ -108,9 +110,6 @@ void processEvents(char eventUp/*!<Flag that allows us to tell if the user is pr
 
 ///Open and read the microphone.
 void openMicrophone(snd_pcm_t **captureHandle/*!<The handle for accessing the microphone.*/);
-
-///Return the value of the microphone.
-int16_t checkSoundLevel(snd_pcm_t *handle/*!<The handle for accessing the microphone.*/);
 
 ///Function for the square root of the sum of the audio buffer.
 double rms(short *buffer/*!<The audio captured from the microphone.*/,

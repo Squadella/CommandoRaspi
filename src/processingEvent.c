@@ -4,7 +4,7 @@
 
 */
 #include "processingEvent.h"
-/*
+
 void setupLaser()
 {
   if(wiringPiSetup()==-1)
@@ -12,10 +12,9 @@ void setupLaser()
     printf("failed to open the gpio pins\n");
     exit(-1);
   }
-
-  pinMode(0, OUTPUT); //CHOISIR LA BONNE PIN
+  pinMode (25, OUTPUT);
 }
-*/
+
 int convertAnalogToAngle(short analogValue)
 {
   int angle;
@@ -83,22 +82,20 @@ void processEvents(char eventUp, char eventDown, FILE *servoblaster, unsigned in
     pthread_t tid2;
     pthread_create(&tid2, NULL, touchedThread, (void*)tid);
   }
-  else if(touchedByLaser==1)
-  {
-    printf("allready touched.");
-  }
 }
 
 void *touchedThread(void *vargp)
 {
   pthread_t tid=(pthread_t)vargp;
+  touchedByLaser=1;
   if(canBeFired==0)
   {
     pthread_join(tid, NULL);
   }
   canBeFired=0;
-  touchedByLaser=1;
+  score-=1;
   printf("TOUCHED PLS WAIT.");
+  fflush(stdout);
   sleep(3);
   canBeFired=1;
   touchedByLaser=0;
@@ -145,32 +142,6 @@ void openMicrophone(snd_pcm_t **captureHandle)
 
   snd_pcm_hw_params_get_period_time(params, &val, &dir);
   *captureHandle=handle;
-}
-
-int16_t checkSoundLevel(snd_pcm_t *handle)
-{
-  int rc, size;
-  int16_t temp2=0;
-  short buffer[8*1024];
-  size=sizeof(buffer)>>1;
-  snd_pcm_uframes_t frames=size;
-  rc = snd_pcm_readi(handle, buffer, frames);
-  if (rc == -EPIPE)
-  {
-    /* EPIPE means overrun */
-    printf("overrun occurred\n");
-    snd_pcm_prepare(handle);
-  }
-  else if (rc < 0)
-  {
-    printf("error from read: %s\n", snd_strerror(rc));
-  }
-  else if (rc != (int)frames)
-  {
-    printf("short read, read %d frames\n", rc);
-  }
-  temp2 = (buffer[0]<<8)+buffer[1];
-  return temp2;
 }
 
 double rms(short *buffer, int buffer_size)
@@ -266,6 +237,9 @@ void *fireThread()
   //USE WIRING PI TO USE THE PHYSICAL LASER.
   canBeFired=0;
   remainingAmmo--;
+  digitalWrite (25, HIGH);
+  sleep(1);
+  digitalWrite (25, LOW);
   sleep(1);
   canBeFired=1;
   return NULL;
@@ -277,6 +251,7 @@ void buttonFirePressed(pthread_t *tid)
   {
     pthread_create(tid, NULL, fireThread, NULL);
     printf("SHOT FIRED\n");
+    printf("%d\n", score);
   }
 }
 
@@ -316,6 +291,7 @@ void listeningJoystick(int joystick, FILE *servoblaster, snd_pcm_t *handle)
   touchedByLaser=0;
   remainingAmmo=5;
   isReloading=0;
+  score=0;
 
   pthread_t tid;
 

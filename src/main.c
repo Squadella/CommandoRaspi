@@ -21,7 +21,7 @@ int main()
     exit(-1);
   }
 
-  //Opening the file for controling the first servo
+  //Opening the file for controling the first servo.
   FILE *fd;
   fd = fopen("/dev/servoblaster","w");
   if(fd==NULL)
@@ -33,10 +33,10 @@ int main()
   //Initialisong the microphone levels and unmuting it. HAS TO BE SET TO THE RASPI AUDIO IN.
   system("amixer -c 1 set Mic playback 100% unmute");
 
-  snd_pcm_t *test;
-  openMicrophone(&test);
-  checkSoundLevel(test);
-  //getMaxValueOfMicrophone(test);
-  listeningJoystick(joystick, fd, test);
+  snd_pcm_t *handle;
+
+  setupLaser();
+  openMicrophone(&handle);
+  listeningJoystick(joystick, fd, handle);
   return 0;
 }

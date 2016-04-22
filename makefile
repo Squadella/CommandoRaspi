@@ -10,7 +10,7 @@ processingEvent.o: src/processingEvent.c
 	gcc $(CFLAGS) -c $^ $(INCDIR)
 
 CommandoRaspi: main.o processingEvent.o
-	gcc $(CFLAGS) main.o processingEvent.o -o $@ $(INCDIR) -lasound -lpthread -lm
+	gcc $(CFLAGS) main.o processingEvent.o -o $@ $(INCDIR) -lasound -lpthread -lwiringPi -lm
 
 .PHONY: clean
 clean:
