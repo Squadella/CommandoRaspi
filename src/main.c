@@ -12,7 +12,7 @@
 
 int main()
 {
-  /*
+
   //Initialising controler
   int joystick=open("/dev/input/js0", O_RDONLY | O_NONBLOCK);
   if(joystick==-1)
@@ -29,14 +29,14 @@ int main()
     printf("Unable to open file, servoblaster may not be installed.\n");
     exit(-1);
   }
-*/
+
   //Initialisong the microphone levels and unmuting it. HAS TO BE SET TO THE RASPI AUDIO IN.
-  system("amixer -c 2 set Mic playback 100% unmute");
+  system("amixer -c 1 set Mic playback 100% unmute");
 
   snd_pcm_t *test;
   openMicrophone(&test);
   checkSoundLevel(test);
-  getMaxValueOfMicrophone(test);
-  //listeningJoystick(joystick, fd);
+  //getMaxValueOfMicrophone(test);
+  listeningJoystick(joystick, fd, test);
   return 0;
 }

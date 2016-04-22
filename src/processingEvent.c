@@ -48,7 +48,7 @@ void analogRecieve(unsigned int timePressed, short value, unsigned int* lastTime
   setNewServoAngle(convertAnalogToAngle(value), servoblaster, servoNumber, ' ');
 }
 
-void processEvents(char eventUp, char eventDown, FILE *servoblaster, unsigned int nowTime, unsigned int* lastUpperServoMovement, int *unblockUpperServo)
+void processEvents(char eventUp, char eventDown, FILE *servoblaster, unsigned int nowTime, unsigned int* lastUpperServoMovement, int *unblockUpperServo, int defaultAmbientLight, int instantAmbiantLight, int *touchedByLaser)
 {
   if(nowTime<(*(lastUpperServoMovement)+TIME_DELAY))
   {
@@ -78,6 +78,10 @@ void processEvents(char eventUp, char eventDown, FILE *servoblaster, unsigned in
     setNewServoAngle(1, servoblaster, '1', '-');
     *lastUpperServoMovement=nowTime;
   }
+  if(defaultAmbientLight<instantAmbiantLight)
+  {
+    printf("Touched by laser!\n");
+  }
 }
 
 void openMicrophone(snd_pcm_t **captureHandle)
@@ -88,7 +92,7 @@ void openMicrophone(snd_pcm_t **captureHandle)
   snd_pcm_uframes_t frames=32;
   int dir;
   int rc;
-  rc=snd_pcm_open(&handle, "hw:2", SND_PCM_STREAM_CAPTURE, 0);
+  rc=snd_pcm_open(&handle, "hw:1", SND_PCM_STREAM_CAPTURE, 0);
   if(rc<0)
   {
     printf("Unable to open pcm device : %s\n", snd_strerror(rc));
@@ -200,18 +204,76 @@ void getMaxValueOfMicrophone(snd_pcm_t *handle)
   printf("max = %d\n", max);
 }
 
+int getAmbientLight(snd_pcm_t *handle, int loopTime)
+{
+  int rc, size, dB;
+  double tmp;
+  int max=0;
+  short buffer[8*1024];
+  size=sizeof(buffer)>>1; //2 bytes 1 channel
+  snd_pcm_uframes_t frames=size;
+  while(loopTime!=0)
+  {
+    rc = snd_pcm_readi(handle, buffer, frames);
+    if (rc == -EPIPE)
+    {
+      /* EPIPE means overrun */
+      printf("overrun occurred\n");
+      snd_pcm_prepare(handle);
+    }
+    else if (rc < 0)
+    {
+      printf("error from read: %s\n", snd_strerror(rc));
+    }
+    else if (rc != (int)frames)
+    {
+      printf("short read, read %d frames\n", rc);
+    }
+    tmp=rms(buffer, size);
+    dB = (int)20*log10(tmp);
+    if(dB>max)
+    {
+      max=dB;
+    }
+    loopTime--;
+  }
+  return max;
+}
+
 int vehicleTouched(snd_pcm_t *captureHandle)
 {
   return 0;
 }
 
-void listeningJoystick(int joystick, FILE *servoblaster)
+void *fireThread(void *vargp)
+{
+  //USE WIRING PI TO USE THE PHYSICAL LASER.
+  canBeFired=0;
+  sleep(1);
+  canBeFired=1;
+  return NULL;
+}
+
+void buttonFirePressed()
+{
+  if(canBeFired==1)
+  {
+    pthread_t tid;
+    pthread_create(&tid, NULL, fireThread, NULL);
+    printf("SHOT FIRED\n");
+  }
+}
+
+void listeningJoystick(int joystick, FILE *servoblaster, snd_pcm_t *handle)
 {
   struct js_event event;
-  int unblock=0, unblockUpperServo=0;
+  int unblock=0, unblockUpperServo=0, ambientLight=0, touchedByLaser=0;
   __u32 lastTimeAnalog1=0, lastUpperServoMovement=0;
   __s16 eventUp=0, eventDown=0;
+  canBeFired=1;
 
+  ambientLight=getAmbientLight(handle, 10);
+  printf("%d\n", ambientLight);
   while(1==1)
   {
     read(joystick, &event, sizeof(struct js_event));
@@ -221,6 +283,13 @@ void listeningJoystick(int joystick, FILE *servoblaster)
       case 1:
       switch (event.number)
       {
+        //Button 3
+        case 2:
+          if(event.value==1)
+          {
+            buttonFirePressed();
+          }
+          break;
         //Upper left trigger
         case 4:
           eventUp=event.value;
@@ -228,6 +297,9 @@ void listeningJoystick(int joystick, FILE *servoblaster)
         //Lower left trigger
         case 6:
           eventDown=event.value;
+          break;
+        default:
+          printf("EVENT NUMBER = %d", event.number);
           break;
       }
       break;
@@ -247,6 +319,6 @@ void listeningJoystick(int joystick, FILE *servoblaster)
       }
       break;
     }
-    processEvents(eventUp, eventDown, servoblaster, event.time, &lastUpperServoMovement, &unblockUpperServo);
+    processEvents(eventUp, eventDown, servoblaster, event.time, &lastUpperServoMovement, &unblockUpperServo, ambientLight, getAmbientLight(handle, 1), &touchedByLaser);
   }
 }

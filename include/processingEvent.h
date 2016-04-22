@@ -59,8 +59,11 @@
 #include <stdlib.h>
 #include <alsa/asoundlib.h>
 #include <math.h>
+#include <pthread.h>
 //#include <wiringPi.h>
 
+
+int canBeFired;
 ///Initialise the gpio pin for the laser.
 void setupLaser();
 ///Used to convert the value returned by the analog to an angle for the servos.
@@ -78,12 +81,15 @@ void analogRecieve(unsigned int timePressed/*!<The time in ms when the key has b
                    int* unblock/*!<Value for unstucking the loop.*/,
                    char servoNumber/*!<The servo number to activate (0 or 1)*/);
 ///Processing all events at the end of the while.
-void processEvents(char eventUp/*!<Flag Flag that allows us to tell if the user is pressing the key to aim higher with the laser.*/,
-                   char eventDown/*!<Flag Flag that allows us to tell if the user is pressing the key to aim lower with the laser.*/,
+void processEvents(char eventUp/*!<Flag that allows us to tell if the user is pressing the key to aim higher with the laser.*/,
+                   char eventDown/*!<Flag that allows us to tell if the user is pressing the key to aim lower with the laser.*/,
                    FILE *servoblaster/*!<The file descriptor of the servoblaster file.*/,
                    unsigned int nowTime/*!<Time when the button has been pressed.*/,
                    unsigned int* lastUpperServoMovement/*!<The last time same button has been pressed.*/,
-                   int *unblockUpperServo/*!<Value for unstucking the loop.*/);
+                   int *unblockUpperServo/*!<Value for unstucking the loop.*/,
+                   int defaultAmbientLight/*!<Value of the ambient light at the begining of the program.*/,
+                   int instantAmbiantLight/*!<The actual value of the microphone.*/,
+                   int *touchedByLaser/*!<Flag that allows us to tell id the raspi was hit by laser or not.*/);
 ///Open and read the microphone.
 void openMicrophone(snd_pcm_t **captureHandle);
 ///Return the value of the microphone.
@@ -92,8 +98,11 @@ int16_t checkSoundLevel(snd_pcm_t *handle);
 double rms(short *buffer, int buffer_size);
 ///Test function for getting the maximum value given by the microphone.
 void getMaxValueOfMicrophone(snd_pcm_t *handle);
+///Return the max value given by the solar array during a short period of time.
+int getAmbientLight(snd_pcm_t *handle, int loopTime);
 ///Used to process all the entries on the joystick.
 void listeningJoystick(int joystick/*!<File descriptor of the joystick device file.*/,
-                       FILE *servoblaster/*!<File descriptor of the servoblaster pseudo file.*/);
+                       FILE *servoblaster/*!<File descriptor of the servoblaster pseudo file.*/,
+                       snd_pcm_t *handle/*!<The handle used to read the microphone input.*/);
 
 #endif
