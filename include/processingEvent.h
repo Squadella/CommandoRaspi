@@ -62,17 +62,28 @@
 #include <pthread.h>
 //#include <wiringPi.h>
 
-
+///Flag for knowing the laser status.
 int canBeFired;
+///Flag for knowing if the raspi has been hit.
+int touchedByLaser;
+///Flag for knowing if the raspi has ammo in his magazine.
+int remainingAmmo;
+///Flag for knowing if the raspi is reloading.
+int isReloading;
+
+
 ///Initialise the gpio pin for the laser.
 void setupLaser();
+
 ///Used to convert the value returned by the analog to an angle for the servos.
 int convertAnalogToAngle(short analogValue/*!<The value returned by the axis.*/);
+
 ///Used to feed the angle to the file controlling the servo.
 void setNewServoAngle(int angle/*!<Angle between 60 and 250*/,
                       FILE *fd/*!<File descriptor of the servo*/,
                       char servoNumber/*!<The servo number (0 or 1)*/,
                       char modifier/*!<Modify the mode of setting the angle (relative of absolute)*/);
+
 ///Used to manage the axis input.
 void analogRecieve(unsigned int timePressed/*!<The time in ms when the key has been pressed.*/,
                    short value/*!<The value returned by the button.*/,
@@ -80,6 +91,10 @@ void analogRecieve(unsigned int timePressed/*!<The time in ms when the key has b
                    FILE *servoblaster/*!<The file descriptor of the servoblaster file.*/,
                    int* unblock/*!<Value for unstucking the loop.*/,
                    char servoNumber/*!<The servo number to activate (0 or 1)*/);
+
+///Action done by the touched thread when the raspi is hit.
+void *touchedThread(void *vargp);
+
 ///Processing all events at the end of the while.
 void processEvents(char eventUp/*!<Flag that allows us to tell if the user is pressing the key to aim higher with the laser.*/,
                    char eventDown/*!<Flag that allows us to tell if the user is pressing the key to aim lower with the laser.*/,
@@ -89,17 +104,37 @@ void processEvents(char eventUp/*!<Flag that allows us to tell if the user is pr
                    int *unblockUpperServo/*!<Value for unstucking the loop.*/,
                    int defaultAmbientLight/*!<Value of the ambient light at the begining of the program.*/,
                    int instantAmbiantLight/*!<The actual value of the microphone.*/,
-                   int *touchedByLaser/*!<Flag that allows us to tell id the raspi was hit by laser or not.*/);
-///Open and read the microphone.
-void openMicrophone(snd_pcm_t **captureHandle);
-///Return the value of the microphone.
-int16_t checkSoundLevel(snd_pcm_t *handle);
+                   pthread_t tid);
 
-double rms(short *buffer, int buffer_size);
+///Open and read the microphone.
+void openMicrophone(snd_pcm_t **captureHandle/*!<The handle for accessing the microphone.*/);
+
+///Return the value of the microphone.
+int16_t checkSoundLevel(snd_pcm_t *handle/*!<The handle for accessing the microphone.*/);
+
+///Function for the square root of the sum of the audio buffer.
+double rms(short *buffer/*!<The audio captured from the microphone.*/,
+           int buffer_size/*!<The size of the buffer.*/);
+
 ///Test function for getting the maximum value given by the microphone.
-void getMaxValueOfMicrophone(snd_pcm_t *handle);
+void getMaxValueOfMicrophone(snd_pcm_t *handle/*!<The handle for accessing the microphone.*/);
+
 ///Return the max value given by the solar array during a short period of time.
-int getAmbientLight(snd_pcm_t *handle, int loopTime);
+int getAmbientLight(snd_pcm_t *handle/*!<The handle for accessing the microphone.*/,
+                    int loopTime/*!<The lenght the system will listen to the sound (in itteration).*/);
+
+///Action done by the fire thread when the button is pressed.
+void *fireThread();
+
+///Launch the fire thread.
+void buttonFirePressed(pthread_t *tid/*!<The id of the thread. This variable is needed by other functions.*/);
+
+///Action done by the reload thread when the button is pressed.
+void *reloadThread(void *vargp/*!<The id of the fire thread, used to wait for it.*/);
+
+///Launch the reload thread.
+void reloadButtonPressed(pthread_t tid/*!<The id of the fire thread, used to wait for it.*/);
+
 ///Used to process all the entries on the joystick.
 void listeningJoystick(int joystick/*!<File descriptor of the joystick device file.*/,
                        FILE *servoblaster/*!<File descriptor of the servoblaster pseudo file.*/,

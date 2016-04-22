@@ -48,7 +48,7 @@ void analogRecieve(unsigned int timePressed, short value, unsigned int* lastTime
   setNewServoAngle(convertAnalogToAngle(value), servoblaster, servoNumber, ' ');
 }
 
-void processEvents(char eventUp, char eventDown, FILE *servoblaster, unsigned int nowTime, unsigned int* lastUpperServoMovement, int *unblockUpperServo, int defaultAmbientLight, int instantAmbiantLight, int *touchedByLaser)
+void processEvents(char eventUp, char eventDown, FILE *servoblaster, unsigned int nowTime, unsigned int* lastUpperServoMovement, int *unblockUpperServo, int defaultAmbientLight, int instantAmbiantLight, pthread_t tid)
 {
   if(nowTime<(*(lastUpperServoMovement)+TIME_DELAY))
   {
@@ -78,10 +78,31 @@ void processEvents(char eventUp, char eventDown, FILE *servoblaster, unsigned in
     setNewServoAngle(1, servoblaster, '1', '-');
     *lastUpperServoMovement=nowTime;
   }
-  if(defaultAmbientLight<instantAmbiantLight)
+  if((defaultAmbientLight+5)<instantAmbiantLight && (touchedByLaser==0))
   {
-    printf("Touched by laser!\n");
+    pthread_t tid2;
+    pthread_create(&tid2, NULL, touchedThread, (void*)tid);
   }
+  else if(touchedByLaser==1)
+  {
+    printf("allready touched.");
+  }
+}
+
+void *touchedThread(void *vargp)
+{
+  pthread_t tid=(pthread_t)vargp;
+  if(canBeFired==0)
+  {
+    pthread_join(tid, NULL);
+  }
+  canBeFired=0;
+  touchedByLaser=1;
+  printf("TOUCHED PLS WAIT.");
+  sleep(3);
+  canBeFired=1;
+  touchedByLaser=0;
+  return NULL;
 }
 
 void openMicrophone(snd_pcm_t **captureHandle)
@@ -240,37 +261,63 @@ int getAmbientLight(snd_pcm_t *handle, int loopTime)
   return max;
 }
 
-int vehicleTouched(snd_pcm_t *captureHandle)
-{
-  return 0;
-}
-
-void *fireThread(void *vargp)
+void *fireThread()
 {
   //USE WIRING PI TO USE THE PHYSICAL LASER.
   canBeFired=0;
+  remainingAmmo--;
   sleep(1);
   canBeFired=1;
   return NULL;
 }
 
-void buttonFirePressed()
+void buttonFirePressed(pthread_t *tid)
 {
-  if(canBeFired==1)
+  if(canBeFired==1 && remainingAmmo!=0)
   {
-    pthread_t tid;
-    pthread_create(&tid, NULL, fireThread, NULL);
+    pthread_create(tid, NULL, fireThread, NULL);
     printf("SHOT FIRED\n");
+  }
+}
+
+void *reloadThread(void *vargp)
+{
+  pthread_t tid = (pthread_t)vargp;
+  isReloading=1;
+  if(canBeFired==0)
+  {
+    pthread_join(tid, NULL);
+  }
+  printf("RELOADING!\n");
+  canBeFired=0;
+  sleep(2);
+  remainingAmmo=5;
+  canBeFired=1;
+  isReloading=0;
+  return NULL;
+}
+
+void reloadButtonPressed(pthread_t tid)
+{
+  if(isReloading==0)
+  {
+    pthread_t tid2;
+    pthread_create(&tid2, NULL, reloadThread, (void*)tid);
   }
 }
 
 void listeningJoystick(int joystick, FILE *servoblaster, snd_pcm_t *handle)
 {
   struct js_event event;
-  int unblock=0, unblockUpperServo=0, ambientLight=0, touchedByLaser=0;
+  int unblock=0, unblockUpperServo=0, ambientLight=0;
   __u32 lastTimeAnalog1=0, lastUpperServoMovement=0;
   __s16 eventUp=0, eventDown=0;
   canBeFired=1;
+  touchedByLaser=0;
+  remainingAmmo=5;
+  isReloading=0;
+
+  pthread_t tid;
 
   ambientLight=getAmbientLight(handle, 10);
   printf("%d\n", ambientLight);
@@ -287,7 +334,14 @@ void listeningJoystick(int joystick, FILE *servoblaster, snd_pcm_t *handle)
         case 2:
           if(event.value==1)
           {
-            buttonFirePressed();
+            buttonFirePressed(&tid);
+          }
+          break;
+        //Button 4
+        case 3:
+          if(event.value==1)
+          {
+            reloadButtonPressed(tid);
           }
           break;
         //Upper left trigger
@@ -319,6 +373,6 @@ void listeningJoystick(int joystick, FILE *servoblaster, snd_pcm_t *handle)
       }
       break;
     }
-    processEvents(eventUp, eventDown, servoblaster, event.time, &lastUpperServoMovement, &unblockUpperServo, ambientLight, getAmbientLight(handle, 1), &touchedByLaser);
+    processEvents(eventUp, eventDown, servoblaster, event.time, &lastUpperServoMovement, &unblockUpperServo, ambientLight, getAmbientLight(handle, 1), tid);
   }
 }
