@@ -64,6 +64,9 @@
 
 ///Flag for knowing the laser status.
 int canBeFired;
+pthread_mutex_t fire;
+pthread_cond_t fireEvent;
+int fireValue;
 ///Flag for knowing if the raspi has been hit.
 int touchedByLaser;
 ///Flag for knowing if the raspi has ammo in his magazine.
@@ -138,5 +141,20 @@ void reloadButtonPressed(pthread_t tid/*!<The id of the fire thread, used to wai
 void listeningJoystick(int joystick/*!<File descriptor of the joystick device file.*/,
                        FILE *servoblaster/*!<File descriptor of the servoblaster pseudo file.*/,
                        snd_pcm_t *handle/*!<The handle used to read the microphone input.*/);
+
+///Mutex for thread to wait for each others
+pthread_mutex_t initSolarArray;
+///Thread for managing all the solar array information.
+void *solarArrayThread(void *vargp);
+
+///Mutex for thread to wait for each others
+pthread_mutex_t initTurret;
+///Thread for managing all the laser action.
+void *turretThread(void *vargp);
+
+///Mutex for thread to wait for each others
+pthread_mutex_t initJoystick;
+///Thread for managing all the user input.
+void *joystickThread(void* vargp);
 
 #endif

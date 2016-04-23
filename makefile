@@ -1,4 +1,4 @@
-CFLAGS=-Wall -Werror -std=gnu99 -g
+CFLAGS=-Wall -Werror -std=gnu++11 -g
 INCDIR=-I./include
 
 all: CommandoRaspi
@@ -14,4 +14,4 @@ CommandoRaspi: main.o processingEvent.o
 
 .PHONY: clean
 clean:
-	rm -f *.o *.out include/*.gch
+	rm -f *.o *.out include/*.gch CommandoRaspi
