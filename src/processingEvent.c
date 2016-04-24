@@ -30,78 +30,6 @@ void setNewServoAngle(int angle, FILE *servoblaster, char servoNumber, char modi
   fflush(servoblaster);
 }
 
-
-void analogRecieve(unsigned int timePressed, short value, unsigned int* lastTime, FILE *servoblaster, int* unblock,  char servoNumber)
-{
-  if(timePressed<(*(lastTime)+TIME_DELAY))
-  {
-    *unblock=*unblock+1;
-    if(*unblock>10)
-    {
-      *lastTime=0;
-      *unblock=0;
-    }
-    return;
-  }
-  *lastTime=timePressed;
-  setNewServoAngle(convertAnalogToAngle(value), servoblaster, servoNumber, ' ');
-}
-
-void processEvents(char eventUp, char eventDown, FILE *servoblaster, unsigned int nowTime, unsigned int* lastUpperServoMovement, int *unblockUpperServo, int defaultAmbientLight, int instantAmbiantLight, pthread_t tid)
-{
-  if(nowTime<(*(lastUpperServoMovement)+TIME_DELAY))
-  {
-    *unblockUpperServo=*unblockUpperServo+1;
-    if(*unblockUpperServo>10)
-    {
-      *lastUpperServoMovement=0;
-      *unblockUpperServo=0;
-    }
-    return;
-  }
-  if(((*lastUpperServoMovement)+TIME_DELAY) > nowTime)
-  {
-    return;
-  }
-  if(eventUp && eventDown)
-  {
-    return;
-  }
-  if(eventUp)
-  {
-    setNewServoAngle(1, servoblaster, '1', '+');
-    *lastUpperServoMovement=nowTime;
-  }
-  else if(eventDown)
-  {
-    setNewServoAngle(1, servoblaster, '1', '-');
-    *lastUpperServoMovement=nowTime;
-  }
-  if((defaultAmbientLight+5)<instantAmbiantLight && (touchedByLaser==0))
-  {
-    pthread_t tid2;
-    pthread_create(&tid2, NULL, touchedThread, (void*)tid);
-  }
-}
-
-void *touchedThread(void *vargp)
-{
-  pthread_t tid=(pthread_t)vargp;
-  touchedByLaser=1;
-  if(canBeFired==0)
-  {
-    pthread_join(tid, NULL);
-  }
-  canBeFired=0;
-  score-=1;
-  printf("TOUCHED PLS WAIT.");
-  fflush(stdout);
-  sleep(3);
-  canBeFired=1;
-  touchedByLaser=0;
-  return NULL;
-}
-
 void openMicrophone(snd_pcm_t **captureHandle)
 {
   snd_pcm_t *handle;
@@ -155,47 +83,6 @@ double rms(short *buffer, int buffer_size)
 	return result;
 }
 
-void getMaxValueOfMicrophone(snd_pcm_t *handle)
-{
-  int loop=1000, rc, size, dB;
-  double tmp;
-  int max=0;
-  short buffer[8*1024];
-  size=sizeof(buffer)>>1; //2 bytes 1 channel
-  snd_pcm_uframes_t frames=size;
-  loop=1000;
-  while(loop!=0)
-  {
-    rc = snd_pcm_readi(handle, buffer, frames);
-    if (rc == -EPIPE)
-    {
-      /* EPIPE means overrun */
-      printf("overrun occurred\n");
-      snd_pcm_prepare(handle);
-    }
-    else if (rc < 0)
-    {
-      printf("error from read: %s\n", snd_strerror(rc));
-    }
-    else if (rc != (int)frames)
-    {
-      printf("short read, read %d frames\n", rc);
-    }
-    printf("tmp2 = %d\n", buffer[0]);
-    tmp=rms(buffer, size);
-    dB = (int)20*log10(tmp);
-    printf("%d\n", dB);
-    if(dB>max)
-    {
-      printf("%d max dB\n", dB);
-      max=dB;
-    }
-    fflush(stdout);
-    loop--;
-  }
-  printf("max = %d\n", max);
-}
-
 int getAmbientLight(snd_pcm_t *handle, int loopTime)
 {
   int rc, size, dB;
@@ -232,9 +119,50 @@ int getAmbientLight(snd_pcm_t *handle, int loopTime)
   return max;
 }
 
+void *solarArrayThread(void *vargp)
+{
+  //Initialise the base value of the solar array.
+  pthread_mutex_lock(&initSolarArray);
+  int ambientLight, err;
+  system("amixer -c 1 set Mic playback 100% unmute");
+  snd_pcm_t *handle;
+  openMicrophone(&handle);
+  ambientLight=getAmbientLight(handle, 10);
+  pthread_mutex_unlock(&initSolarArray);
+
+  //Waiting for other thread to initialise
+  pthread_mutex_lock(&initJoystick);
+  pthread_mutex_unlock(&initJoystick);
+  pthread_mutex_lock(&initTurret);
+  pthread_mutex_unlock(&initTurret);
+
+  //TODO mettre une mutex pour éviter les touches multiples.
+  while(1==1)
+  {
+    if((ambientLight+5)<getAmbientLight(handle, 1))
+    {
+      //Wait for last turret action to finish
+      pthread_mutex_lock(&fire);
+      fireValue=2;
+      pthread_mutex_unlock(&fire);
+      //Launching event
+      err=pthread_cond_signal(&fireEvent);
+      if(err!=0)
+      {
+        printf("Error when setting fireEvent : %d\n", err);
+        pthread_exit(NULL);
+      }
+      //5 seconds of invulnerability
+      sleep(5);
+    }
+  }
+  return NULL;
+}
+
 void *fireThread(void *vargp)
 {
-  //USE WIRING PI TO USE THE PHYSICAL LASER.
+  pthread_mutex_lock(&isFiring);
+  pthread_detach(pthread_self());
   canBeFired=0;
   remainingAmmo--;
   digitalWrite (25, HIGH);
@@ -242,158 +170,48 @@ void *fireThread(void *vargp)
   digitalWrite (25, LOW);
   sleep(1);
   canBeFired=1;
-  return NULL;
-}
-
-void buttonFirePressed(pthread_t *tid)
-{
-  if(canBeFired==1 && remainingAmmo!=0)
-  {
-    pthread_create(tid, NULL, fireThread, NULL);
-    printf("SHOT FIRED\n");
-    printf("%d\n", score);
-  }
+  pthread_mutex_unlock(&isFiring);
+  pthread_exit(NULL);
 }
 
 void *reloadThread(void *vargp)
 {
-  pthread_t tid = (pthread_t)vargp;
-  isReloading=1;
-  if(canBeFired==0)
-  {
-    pthread_join(tid, NULL);
-  }
-  printf("RELOADING!\n");
+  pthread_mutex_lock(&isFiring);
+  pthread_detach(pthread_self());
   canBeFired=0;
+  printf("RELOADING!\n");
   sleep(2);
   remainingAmmo=5;
   canBeFired=1;
-  isReloading=0;
-  return NULL;
+  pthread_mutex_unlock(&isFiring);
+  pthread_exit(NULL);
 }
 
-void reloadButtonPressed(pthread_t tid)
+void *touchedThread(void *vargp)
 {
-  if(isReloading==0)
-  {
-    pthread_t tid2;
-    pthread_create(&tid2, NULL, reloadThread, (void*)tid);
-  }
-}
-
-
-void listeningJoystick(int joystick, FILE *servoblaster, snd_pcm_t *handle)
-{
-
-  struct js_event event;
-  int unblock=0, unblockUpperServo=0, ambientLight=0;
-  __u32 lastTimeAnalog1=0, lastUpperServoMovement=0;
-  __s16 eventUp=0, eventDown=0;
-  canBeFired=1;
+  pthread_detach(pthread_self());
+  pthread_mutex_lock(&isFiring);
+  touchedByLaser=1;
+  score-=1;
+  pthread_mutex_unlock(&isFiring);
+  printf("TOUCHED PLS WAIT.");
+  fflush(stdout);
+  sleep(3);
   touchedByLaser=0;
-  remainingAmmo=5;
-  isReloading=0;
-  score=0;
-
-  pthread_t tid;
-
-  ambientLight=getAmbientLight(handle, 10);
-  printf("%d\n", ambientLight);
-  while(1==1)
-  {
-    read(joystick, &event, sizeof(struct js_event));
-    switch (event.type)
-    {
-      //Button
-      case 1:
-      switch (event.number)
-      {
-        //Button 3
-        case 2:
-          if(event.value==1)
-          {
-            buttonFirePressed(&tid);
-          }
-          break;
-        //Button 4
-        case 3:
-          if(event.value==1)
-          {
-            reloadButtonPressed(tid);
-          }
-          break;
-        //Upper left trigger
-        case 4:
-          eventUp=event.value;
-          break;
-        //Lower left trigger
-        case 6:
-          eventDown=event.value;
-          break;
-        default:
-          printf("EVENT NUMBER = %d", event.number);
-          break;
-      }
-      break;
-
-      //Analogic
-      case 2:
-      switch (event.number)
-      {
-        //Right axis left/right
-        case 2:
-          analogRecieve(event.time, event.value, &lastTimeAnalog1, servoblaster, &unblock, '0');
-          break;
-        //Right axis up/down
-        case 3:
-
-          break;
-      }
-      break;
-    }
-    processEvents(eventUp, eventDown, servoblaster, event.time, &lastUpperServoMovement, &unblockUpperServo, ambientLight, getAmbientLight(handle, 1), tid);
-  }
-}
-
-void *solarArrayThread(void *vargp)
-{
-  //Initialise the base value of the solar array.
-  int ambientLight;
-  system("amixer -c 1 set Mic playback 100% unmute");
-  snd_pcm_t *handle;
-  openMicrophone(&handle);
-  ambientLight=getAmbientLight(handle, 10);
-
-  //TODO mettre une mutex pour éviter les touches multiples.
-  int err;
-  while(1==1)
-  {
-    if((ambientLight+5)<getAmbientLight(handle, 1))
-    {
-      pthread_mutex_lock(&fire);
-      fireValue=2;
-      pthread_mutex_unlock(&fire);
-      err=pthread_cond_signal(&fireEvent);
-      if(err!=0)
-      {
-        printf("Error when setting fireEvent : %d\n", err);
-        pthread_exit(NULL);
-      }
-      sleep(5);
-    }
-  }
   return NULL;
 }
 
+//TODO pas convaincu par le lock et unlock mutex a test
 void *turretThread(void *vargp)
 {
+  if(pthread_mutex_lock(&fire))
+  {
+    printf("Error when locking fire event");
+    pthread_exit(NULL);
+  }
+  setupLaser();
   while(1==1)
   {
-    if(pthread_mutex_lock(&fire))
-    {
-      printf("Error when locking fire event");
-      pthread_exit(NULL);
-    }
     //Waiting for signal of others threads.
     if(pthread_cond_wait(&fireEvent, &fire))
     {
@@ -401,12 +219,24 @@ void *turretThread(void *vargp)
       {
         //The user pressed the fire button
         case 0:
+          if(canBeFired==1 && touchedByLaser==0)
+          {
+            pthread_t tmp;
+            pthread_create(&tmp, NULL, fireThread, NULL);
+          }
           break;
         //The user pressed the reload button
         case 1:
+          if(canBeFired==1)
+          {
+            pthread_t tmp;
+            pthread_create(&tmp, NULL, reloadThread, NULL);
+          }
           break;
         //The pi has been hit by the enemy
         case 2:
+          pthread_t tmp;
+          pthread_create(&tmp, NULL, touchedThread, NULL);
           break;
         //Unexpected value
         default:
@@ -416,10 +246,46 @@ void *turretThread(void *vargp)
       }
     }
   }
+  pthread_mutex_unlock(&fire);
   return NULL;
 }
 
-void *joystickThread(void* vargp)
+void *upperServoThread(void *vargp)
+{
+  FILE* servoblaster = (FILE*)vargp;
+  pthread_mutex_lock(&upperServoMovement);
+  while(1==1)
+  {
+    if(pthread_cond_wait(&upperServoEvent, &upperServoMovement))
+    {
+      //Going up
+      if(upperServoDirection==0)
+      {
+        setNewServoAngle(1, servoblaster, '1', '+');
+      }
+      //Going down
+      else
+      {
+        setNewServoAngle(1, servoblaster, '1', '-');
+      }
+      usleep(500);
+    }
+  }
+  pthread_mutex_unlock(&upperServoMovement);
+  pthread_exit(NULL);
+}
+
+void *lowerServoThread(void *vargp)
+{
+  pthread_mutex_lock(&lowerServoMovement);
+  pthread_detach(pthread_self());
+  lowerServoArg *tmp = (lowerServoArg *)vargp;
+  setNewServoAngle(convertAnalogToAngle(tmp->eventValue), tmp->servoblaster, 0, ' ');
+  pthread_mutex_unlock(&lowerServoMovement);
+  pthread_exit(NULL);
+}
+
+void *joystickThread(void *vargp)
 {
   pthread_mutex_lock(&initJoystick);
   //Initialising the controller
@@ -432,18 +298,23 @@ void *joystickThread(void* vargp)
 
   //Initialising the servos
   FILE *servoblaster;
+  pthread_t upperServoThreadID;
   servoblaster = fopen("/dev/servoblaster","w");
   if(servoblaster==NULL)
   {
     printf("Unable to open file, servoblaster may not be installed.\n");
     exit(-1);
   }
+  //Creating the upper servo thread
+  pthread_create(&upperServoThreadID, NULL, upperServoThread, (void*)servoblaster);
+
+  //Waiting for the thread to initialise
+  pthread_mutex_lock(&upperServoMovement);
+  pthread_mutex_unlock(&upperServoMovement);
 
   //Initialising variables
   struct js_event event;
-  int unblock=0, err /*, unblockUpperServo=0*/;
-  __u32 lastTimeAnalog1=0/*, lastUpperServoMovement=0*/;
-  //__s16 eventUp=0, eventDown=0;
+  int err;
   canBeFired=1;
   touchedByLaser=0;
   remainingAmmo=5;
@@ -495,11 +366,23 @@ void *joystickThread(void* vargp)
           break;
         //Upper left trigger : Turret going up
         case 4:
-          //TODO faire des threads détaché qui font monter de 1 la tourelle (temporisation a faire)
+          upperServoDirection=0;
+          err=pthread_cond_signal(&upperServoEvent);
+          if(err!=0)
+          {
+            printf("Error when setting upperServoEvent : %d\n", err);
+            pthread_exit(NULL);
+          }
           break;
         //Lower left trigger : Turret going down
         case 6:
-          //TODO faire des threads détaché qui font descendre de 1 la tourelle (temporisation a faire)
+          upperServoDirection=1;
+          err=pthread_cond_signal(&upperServoEvent);
+          if(err!=0)
+          {
+            printf("Error when setting upperServoEvent : %d\n", err);
+            pthread_exit(NULL);
+          }
           break;
         default:
           printf("EVENT NUMBER = %d", event.number);
@@ -513,11 +396,11 @@ void *joystickThread(void* vargp)
       {
         //Right axis left/right
         case 2:
-          analogRecieve(event.time, event.value, &lastTimeAnalog1, servoblaster, &unblock, '0');
-          break;
-        //Right axis up/down
-        case 3:
-
+          pthread_t tmp;
+          lowerServoArg* threadArg;
+          threadArg->eventValue=event.value;
+          threadArg->servoblaster=servoblaster;
+          pthread_create(&tmp, NULL, lowerServoThread, (void*)threadArg);
           break;
       }
       break;

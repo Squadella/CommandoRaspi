@@ -12,21 +12,21 @@
 
 int main()
 {
-  //TODO initialise all the mutexes and cond
-  fire=PTHREAD_MUTEX_INITIALIZER;
-  fireEvent=PTHREAD_COND_INITIALIZER;
+  //TODO initialise all the mutexes and cond and global vars
+  //fire=PTHREAD_MUTEX_INITIALIZER;
+  //fireEvent=PTHREAD_COND_INITIALIZER;
 
-  //Initialisong the microphone levels and unmuting it. HAS TO BE SET TO THE RASPI AUDIO IN.
-  pthread_t *solarArrayThreadID;
+  //Initialising main threads
+  pthread_t solarArrayThreadID;
+  pthread_t joystickThreadID;
+  pthread_t turretThreadID;
 
-  setupLaser();
-  //listeningJoystick(joystick, fd, handle);
+  pthread_create(&solarArrayThreadID, NULL, solarArrayThread, NULL);
+  pthread_create(&joystickThreadID, NULL, joystickThread, NULL);
+  pthread_create(&turretThreadID, NULL, turretThread, NULL);
 
-  //Créer 5 thread:
-  //  -joystick control
-  //  -solar array control
-  //  -turret control
-
-  pthread_create(solarArrayThreadID, NULL, solarArrayThread, NULL);
+  pthread_join(solarArrayThreadID, NULL);
+  pthread_join(joystickThreadID, NULL);
+  pthread_join(turretThreadID, NULL);
   return 0;
 }

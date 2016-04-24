@@ -49,24 +49,24 @@
 ///Use the newer ALSA API.
 #define ALSA_PCM_NEW_HW_PARAMS_API
 
+
 #include <linux/joystick.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <fcntl.h>
 #include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
 #include <alsa/asoundlib.h>
 #include <math.h>
 #include <pthread.h>
 #include <wiringPi.h>
 
+typedef struct lowerServoArg
+{
+  FILE* servoblaster;
+  __s16 eventValue;
+} lowerServoArg;
+
 ///Flag for knowing the laser status.
-int canBeFired;
-pthread_mutex_t fire;
-pthread_cond_t fireEvent;
-int fireValue;
 ///Flag for knowing if the raspi has been hit.
 int touchedByLaser;
 ///Flag for knowing if the raspi has ammo in his magazine.
@@ -89,28 +89,6 @@ void setNewServoAngle(int angle/*!<Angle between 60 and 250*/,
                       char servoNumber/*!<The servo number (0 or 1)*/,
                       char modifier/*!<Modify the mode of setting the angle (relative of absolute)*/);
 
-///Used to manage the axis input.
-void analogRecieve(unsigned int timePressed/*!<The time in ms when the key has been pressed.*/,
-                   short value/*!<The value returned by the button.*/,
-                   unsigned int* lastTime/*!<The last time same button has been pressed.*/,
-                   FILE *servoblaster/*!<The file descriptor of the servoblaster file.*/,
-                   int* unblock/*!<Value for unstucking the loop.*/,
-                   char servoNumber/*!<The servo number to activate (0 or 1)*/);
-
-///Action done by the touched thread when the raspi is hit.
-void *touchedThread(void *vargp);
-
-///Processing all events at the end of the while.
-void processEvents(char eventUp/*!<Flag that allows us to tell if the user is pressing the key to aim higher with the laser.*/,
-                   char eventDown/*!<Flag that allows us to tell if the user is pressing the key to aim lower with the laser.*/,
-                   FILE *servoblaster/*!<The file descriptor of the servoblaster file.*/,
-                   unsigned int nowTime/*!<Time when the button has been pressed.*/,
-                   unsigned int* lastUpperServoMovement/*!<The last time same button has been pressed.*/,
-                   int *unblockUpperServo/*!<Value for unstucking the loop.*/,
-                   int defaultAmbientLight/*!<Value of the ambient light at the begining of the program.*/,
-                   int instantAmbiantLight/*!<The actual value of the microphone.*/,
-                   pthread_t tid);
-
 ///Open and read the microphone.
 void openMicrophone(snd_pcm_t **captureHandle/*!<The handle for accessing the microphone.*/);
 
@@ -118,43 +96,58 @@ void openMicrophone(snd_pcm_t **captureHandle/*!<The handle for accessing the mi
 double rms(short *buffer/*!<The audio captured from the microphone.*/,
            int buffer_size/*!<The size of the buffer.*/);
 
-///Test function for getting the maximum value given by the microphone.
-void getMaxValueOfMicrophone(snd_pcm_t *handle/*!<The handle for accessing the microphone.*/);
-
 ///Return the max value given by the solar array during a short period of time.
 int getAmbientLight(snd_pcm_t *handle/*!<The handle for accessing the microphone.*/,
                     int loopTime/*!<The lenght the system will listen to the sound (in itteration).*/);
 
-///Action done by the fire thread when the button is pressed.
-void *fireThread();
-
-///Launch the fire thread.
-void buttonFirePressed(pthread_t *tid/*!<The id of the thread. This variable is needed by other functions.*/);
-
-///Action done by the reload thread when the button is pressed.
-void *reloadThread(void *vargp/*!<The id of the fire thread, used to wait for it.*/);
-
-///Launch the reload thread.
-void reloadButtonPressed(pthread_t tid/*!<The id of the fire thread, used to wait for it.*/);
-
-///Used to process all the entries on the joystick.
-void listeningJoystick(int joystick/*!<File descriptor of the joystick device file.*/,
-                       FILE *servoblaster/*!<File descriptor of the servoblaster pseudo file.*/,
-                       snd_pcm_t *handle/*!<The handle used to read the microphone input.*/);
-
-///Mutex for thread to wait for each others
-pthread_mutex_t initSolarArray;
 ///Thread for managing all the solar array information.
 void *solarArrayThread(void *vargp);
+///Mutex for thread to wait for each others.
+pthread_mutex_t initSolarArray;
 
-///Mutex for thread to wait for each others
-pthread_mutex_t initTurret;
+///Action done by the fire thread when the button is pressed.
+void *fireThread(void *vargp);
+
+///Action done by the reload thread when the button is pressed.
+void *reloadThread(void *vargp);
+
+///Action done by the touched thread when the raspi is hit.
+void *touchedThread(void *vargp);
+
 ///Thread for managing all the laser action.
 void *turretThread(void *vargp);
+///Mutex for thread to wait for each others.
+pthread_mutex_t initTurret;
+///Mutex for the wait condition.
+pthread_mutex_t fire=PTHREAD_MUTEX_INITIALIZER;
+///Mutex for locking if the user if allready firing or reloading.
+pthread_mutex_t isFiring;
+///Condition when the fire, reload or user has been hit.
+pthread_cond_t fireEvent;
+///Flag for choosing the action after the wait condition (0=fire, 1=reload, 2=hit).
+int fireValue;
+///Flag for knowing the laser status.
+int canBeFired;
 
-///Mutex for thread to wait for each others
-pthread_mutex_t initJoystick;
+///Thread for managing all the movement of the upper servo of the turret.
+void *upperServoThread(void *vargp);
+///Mutex for locking the wait condition.
+pthread_mutex_t upperServoMovement;
+///Condtion send by joystickThread when the user press the appropriate button.
+pthread_cond_t upperServoEvent;
+///Flag for knowing the direction of the upper Servo (0=up, 1=down).
+int upperServoDirection;
+
+///Thread for managing all the movement of the lower servo of the turret.
+void *lowerServoThread(void *vargp/*!<Argument containing the file descriptor for servoblaster and the value returned by the joystick.*/);
+///Mutex for locking the wait condition.
+pthread_mutex_t lowerServoMovement;
+///Condtion send by joystickThread when the user press the appropriate button.
+pthread_cond_t lowerServoEvent;
+
 ///Thread for managing all the user input.
 void *joystickThread(void* vargp);
+///Mutex for thread to wait for each others.
+pthread_mutex_t initJoystick;
 
 #endif
