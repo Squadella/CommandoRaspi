@@ -1,20 +1,23 @@
-#include <linux/joystick.h>
-#include <stdio.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
-#include <alsa/asoundlib.h>
-
 #include "processingEvent.h"
 
 int main()
 {
   //TODO initialise all the mutexes and cond and global vars
-  //fire=PTHREAD_MUTEX_INITIALIZER;
-  //fireEvent=PTHREAD_COND_INITIALIZER;
+  //Mutex initialisation
+  pthread_mutex_init(&initSolarArray, NULL);
+  pthread_mutex_init(&initTurret, NULL);
+  pthread_mutex_init(&fire, NULL);
+  pthread_mutex_init(&isFiring, NULL);
+  pthread_mutex_init(&upperServoMovement, NULL);
+  pthread_mutex_init(&lowerServoMovement, NULL);
+  pthread_mutex_init(&initJoystick, NULL);
+
+  //Condtion initialisation
+  pthread_cond_init(&fireEvent, NULL);
+  pthread_cond_init(&upperServoEvent, NULL);
+  pthread_cond_init(&lowerServoEvent, NULL);
+
+
 
   //Initialising main threads
   pthread_t solarArrayThreadID;

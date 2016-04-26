@@ -1,5 +1,5 @@
-CFLAGS=-Wall -Werror -g -lasound -lpthread -lwiringPi -lm
-INCDIR=-I./include
+CFLAGS=-Wall -Werror
+INCDIR=-I./include -lasound -lpthread -lwiringPi -lm
 
 all: CommandoRaspi
 

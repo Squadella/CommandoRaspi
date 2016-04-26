@@ -60,20 +60,18 @@
 #include <pthread.h>
 #include <wiringPi.h>
 
+///Struct for giving information to the lowerServoThread.
 typedef struct lowerServoArg
 {
-  FILE* servoblaster;
-  __s16 eventValue;
+  FILE* servoblaster;/*!<The file descriptor for controlling the servo.*/
+  __s16 eventValue;/*!<The value given by the joystick.*/
 } lowerServoArg;
 
-///Flag for knowing the laser status.
 ///Flag for knowing if the raspi has been hit.
 int touchedByLaser;
 ///Flag for knowing if the raspi has ammo in his magazine.
 int remainingAmmo;
-///Flag for knowing if the raspi is reloading.
-int isReloading;
-
+///The number of time the player has been touched.
 int score;
 
 
@@ -103,7 +101,7 @@ int getAmbientLight(snd_pcm_t *handle/*!<The handle for accessing the microphone
 ///Thread for managing all the solar array information.
 void *solarArrayThread(void *vargp);
 ///Mutex for thread to wait for each others.
-pthread_mutex_t initSolarArray;
+static pthread_mutex_t initSolarArray;
 
 ///Action done by the fire thread when the button is pressed.
 void *fireThread(void *vargp);
@@ -117,11 +115,11 @@ void *touchedThread(void *vargp);
 ///Thread for managing all the laser action.
 void *turretThread(void *vargp);
 ///Mutex for thread to wait for each others.
-pthread_mutex_t initTurret;
+static pthread_mutex_t initTurret;
 ///Mutex for the wait condition.
-pthread_mutex_t fire=PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t fire;
 ///Mutex for locking if the user if allready firing or reloading.
-pthread_mutex_t isFiring;
+static pthread_mutex_t isFiring;
 ///Condition when the fire, reload or user has been hit.
 pthread_cond_t fireEvent;
 ///Flag for choosing the action after the wait condition (0=fire, 1=reload, 2=hit).
@@ -132,7 +130,7 @@ int canBeFired;
 ///Thread for managing all the movement of the upper servo of the turret.
 void *upperServoThread(void *vargp);
 ///Mutex for locking the wait condition.
-pthread_mutex_t upperServoMovement;
+static pthread_mutex_t upperServoMovement;
 ///Condtion send by joystickThread when the user press the appropriate button.
 pthread_cond_t upperServoEvent;
 ///Flag for knowing the direction of the upper Servo (0=up, 1=down).
@@ -141,13 +139,13 @@ int upperServoDirection;
 ///Thread for managing all the movement of the lower servo of the turret.
 void *lowerServoThread(void *vargp/*!<Argument containing the file descriptor for servoblaster and the value returned by the joystick.*/);
 ///Mutex for locking the wait condition.
-pthread_mutex_t lowerServoMovement;
+static pthread_mutex_t lowerServoMovement;
 ///Condtion send by joystickThread when the user press the appropriate button.
 pthread_cond_t lowerServoEvent;
 
 ///Thread for managing all the user input.
 void *joystickThread(void* vargp);
 ///Mutex for thread to wait for each others.
-pthread_mutex_t initJoystick;
+static pthread_mutex_t initJoystick;
 
 #endif

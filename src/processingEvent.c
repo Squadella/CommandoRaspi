@@ -163,6 +163,8 @@ void *fireThread(void *vargp)
 {
   pthread_mutex_lock(&isFiring);
   pthread_detach(pthread_self());
+  printf("SHOT FIRED!\n");
+  fflush(stdout);
   canBeFired=0;
   remainingAmmo--;
   digitalWrite (25, HIGH);
@@ -178,6 +180,7 @@ void *reloadThread(void *vargp)
 {
   pthread_mutex_lock(&isFiring);
   pthread_detach(pthread_self());
+  printf("SHOT FIRED!\n");
   canBeFired=0;
   printf("RELOADING!\n");
   sleep(2);
@@ -204,12 +207,24 @@ void *touchedThread(void *vargp)
 //TODO pas convaincu par le lock et unlock mutex a test
 void *turretThread(void *vargp)
 {
+  //Initialisation phase
+  pthread_mutex_lock(&initTurret);
+  setupLaser();
+  pthread_mutex_unlock(&initTurret);
+
   if(pthread_mutex_lock(&fire))
   {
     printf("Error when locking fire event");
     pthread_exit(NULL);
   }
-  setupLaser();
+  printf("laser has been set up.\n");
+
+  //Wait for other thread to initialise
+  pthread_mutex_lock(&initJoystick);
+  pthread_mutex_unlock(&initJoystick);
+  pthread_mutex_lock(&initSolarArray);
+  pthread_mutex_unlock(&initSolarArray);
+
   while(1==1)
   {
     //Waiting for signal of others threads.
@@ -229,14 +244,15 @@ void *turretThread(void *vargp)
         case 1:
           if(canBeFired==1)
           {
-            pthread_t tmp;
-            pthread_create(&tmp, NULL, reloadThread, NULL);
+            pthread_t tmp2;
+            pthread_create(&tmp2, NULL, reloadThread, NULL);
           }
           break;
         //The pi has been hit by the enemy
         case 2:
-          pthread_t tmp;
-          pthread_create(&tmp, NULL, touchedThread, NULL);
+          ;//Empty statement for avoid a compilation error.
+          pthread_t tmp3;
+          pthread_create(&tmp3, NULL, touchedThread, NULL);
           break;
         //Unexpected value
         default:
@@ -318,7 +334,6 @@ void *joystickThread(void *vargp)
   canBeFired=1;
   touchedByLaser=0;
   remainingAmmo=5;
-  isReloading=0;
   score=0;
 
   pthread_mutex_unlock(&initJoystick);
@@ -343,11 +358,14 @@ void *joystickThread(void *vargp)
           if(event.value==1)
           {
             fireValue=0;
-            err=pthread_cond_signal(&fireEvent);
-            if(err!=0)
+            if(remainingAmmo>0)
             {
-              printf("Error when setting fireEvent : %d\n", err);
-              pthread_exit(NULL);
+              err=pthread_cond_broadcast(&fireEvent);
+              if(err!=0)
+              {
+                printf("Error when setting fireEvent : %d\n", err);
+                pthread_exit(NULL);
+              }
             }
           }
           break;
@@ -396,11 +414,12 @@ void *joystickThread(void *vargp)
       {
         //Right axis left/right
         case 2:
-          pthread_t tmp;
-          lowerServoArg* threadArg;
+          ;//Empty statement for avoid a compilation error.
+          pthread_t tmp4;
+          lowerServoArg* threadArg=NULL;
           threadArg->eventValue=event.value;
           threadArg->servoblaster=servoblaster;
-          pthread_create(&tmp, NULL, lowerServoThread, (void*)threadArg);
+          pthread_create(&tmp4, NULL, lowerServoThread, (void*)threadArg);
           break;
       }
       break;
