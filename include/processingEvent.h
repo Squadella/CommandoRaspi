@@ -122,6 +122,10 @@ static pthread_mutex_t fire;
 static pthread_mutex_t isFiring;
 ///Condition when the fire, reload or user has been hit.
 pthread_cond_t fireEvent;
+///Condition for checking if the laser launched reload.
+int reloadCond;
+///
+int fireCond;
 ///Flag for choosing the action after the wait condition (0=fire, 1=reload, 2=hit).
 int fireValue;
 ///Flag for knowing the laser status.
@@ -135,6 +139,8 @@ static pthread_mutex_t upperServoMovement;
 pthread_cond_t upperServoEvent;
 ///Flag for knowing the direction of the upper Servo (0=up, 1=down).
 int upperServoDirection;
+///The test condition for upperServoEvent.
+int upperServoCond;
 
 ///Thread for managing all the movement of the lower servo of the turret.
 void *lowerServoThread(void *vargp/*!<Argument containing the file descriptor for servoblaster and the value returned by the joystick.*/);
@@ -142,6 +148,8 @@ void *lowerServoThread(void *vargp/*!<Argument containing the file descriptor fo
 static pthread_mutex_t lowerServoMovement;
 ///Condtion send by joystickThread when the user press the appropriate button.
 pthread_cond_t lowerServoEvent;
+///The test condition for lowerServoEvent.
+int lowerServoCond;
 
 ///Thread for managing all the user input.
 void *joystickThread(void* vargp);
