@@ -102,6 +102,8 @@ int getAmbientLight(snd_pcm_t *handle/*!<The handle for accessing the microphone
 void *solarArrayThread(void *vargp);
 ///Mutex for thread to wait for each others.
 static pthread_mutex_t initSolarArray;
+///Condition for checking if the solar array thread launhed sucessfully.
+int touchedCond;
 
 ///Action done by the fire thread when the button is pressed.
 void *fireThread(void *vargp);
@@ -124,7 +126,7 @@ static pthread_mutex_t isFiring;
 pthread_cond_t fireEvent;
 ///Condition for checking if the laser launched reload.
 int reloadCond;
-///
+///Condition for checking if the laser launched fire.
 int fireCond;
 ///Flag for choosing the action after the wait condition (0=fire, 1=reload, 2=hit).
 int fireValue;
@@ -141,6 +143,8 @@ pthread_cond_t upperServoEvent;
 int upperServoDirection;
 ///The test condition for upperServoEvent.
 int upperServoCond;
+///The current angle of the servo.
+int upperServoAngleCurrentAngle;
 
 ///Thread for managing all the movement of the lower servo of the turret.
 void *lowerServoThread(void *vargp/*!<Argument containing the file descriptor for servoblaster and the value returned by the joystick.*/);
