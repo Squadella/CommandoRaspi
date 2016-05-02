@@ -15,7 +15,7 @@ void setupLaser()
   pinMode (25, OUTPUT);
 }
 
-int convertAnalogToAngle(short analogValue)
+int convertAnalogToAngle(__s16 analogValue)
 {
   int angle;
   angle=310-(((344*150)+analogValue)/344);
@@ -307,10 +307,10 @@ void *upperServoThread(void *vargp)
 
 void *lowerServoThread(void *vargp)
 {
-  pthread_mutex_lock(&lowerServoMovement);
   pthread_detach(pthread_self());
-  lowerServoArg *tmp = (lowerServoArg *)vargp;
-  setNewServoAngle(convertAnalogToAngle(tmp->eventValue), tmp->servoblaster, 0, ' ');
+  FILE* servoblaster = (FILE*)vargp;
+  pthread_mutex_lock(&lowerServoMovement);
+  setNewServoAngle(convertAnalogToAngle(eventValue), servoblaster, '0', ' ');
   pthread_mutex_unlock(&lowerServoMovement);
   pthread_exit(NULL);
 }
@@ -334,7 +334,7 @@ void *joystickThread(void *vargp)
     printf("Unable to open file, servoblaster may not be installed.\n");
     exit(-1);
   }
-  pthread_t upperServoThreadID;
+  pthread_t upperServoThreadID, lowerServoThreadID;
   pthread_create(&upperServoThreadID, NULL, upperServoThread, (void*)servoblaster);
 
   //Waiting for the thread to initialise
@@ -357,6 +357,8 @@ void *joystickThread(void *vargp)
   pthread_mutex_unlock(&initSolarArray);
   pthread_mutex_lock(&initTurret);
   pthread_mutex_unlock(&initTurret);
+
+  event.value=0;
 
   while (1==1)
   {
@@ -456,12 +458,9 @@ void *joystickThread(void *vargp)
       {
         //Right axis left/right
         case 2:
-          ;//Empty statement for avoid a compilation error.
-          pthread_t tmp4;
-          lowerServoArg* threadArg=NULL;
-          threadArg->eventValue=event.value;
-          threadArg->servoblaster=servoblaster;
-          pthread_create(&tmp4, NULL, lowerServoThread, (void*)threadArg);
+          ;
+          eventValue=event.value;
+          pthread_create(&lowerServoThreadID, NULL, lowerServoThread, (void*)servoblaster);
           break;
       }
       break;

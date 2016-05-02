@@ -60,12 +60,6 @@
 #include <pthread.h>
 #include <wiringPi.h>
 
-///Struct for giving information to the lowerServoThread.
-typedef struct lowerServoArg
-{
-  FILE* servoblaster;/*!<The file descriptor for controlling the servo.*/
-  __s16 eventValue;/*!<The value given by the joystick.*/
-} lowerServoArg;
 
 ///Flag for knowing if the raspi has been hit.
 int touchedByLaser;
@@ -79,7 +73,7 @@ int score;
 void setupLaser();
 
 ///Used to convert the value returned by the analog to an angle for the servos.
-int convertAnalogToAngle(short analogValue/*!<The value returned by the axis.*/);
+int convertAnalogToAngle(__s16 analogValue/*!<The value returned by the axis.*/);
 
 ///Used to feed the angle to the file controlling the servo.
 void setNewServoAngle(int angle/*!<Angle between 60 and 250*/,
@@ -154,6 +148,8 @@ static pthread_mutex_t lowerServoMovement;
 pthread_cond_t lowerServoEvent;
 ///The test condition for lowerServoEvent.
 int lowerServoCond;
+///Value of the last input of the joystick.
+__s16 eventValue;
 
 ///Thread for managing all the user input.
 void *joystickThread(void* vargp);
