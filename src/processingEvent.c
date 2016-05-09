@@ -25,7 +25,6 @@ int convertAnalogToAngle(__s16 analogValue)
 void setNewServoAngle(int angle, FILE *servoblaster, char servoNumber, char modifier)
 {
   fflush(servoblaster);
-  printf("%d\n", angle);
   fprintf(servoblaster, "%c=%c%d\n", servoNumber, modifier, angle);
   fflush(servoblaster);
 }
@@ -123,7 +122,7 @@ void *solarArrayThread(void *vargp)
 {
   //Initialise the base value of the solar array.
   pthread_mutex_lock(&initSolarArray);
-  int ambientLight, err;
+  int ambientLight, err, currentLight;
   system("amixer -c 1 set Mic playback 100% unmute");
   snd_pcm_t *handle;
   openMicrophone(&handle);
@@ -136,15 +135,19 @@ void *solarArrayThread(void *vargp)
   pthread_mutex_lock(&initTurret);
   pthread_mutex_unlock(&initTurret);
 
-  //TODO mettre une mutex pour éviter les touches multiples.
-  while(1==1)
+  printf("ambientLight = %d\n", ambientLight);
+  //TEST: quand el laser touche le panneau 0 s'affiche comme valeur. On va tester avec ça.
+  while(1)
   {
-    if((ambientLight+5)<getAmbientLight(handle, 1))
+    currentLight=getAmbientLight(handle, 1);
+    printf("%d\n", currentLight);
+    if((ambientLight+4)<currentLight)
     {
       fireValue=2;
       //Launching event
       while(touchedCond==0)
         err=pthread_cond_signal(&fireEvent);
+      touchedCond=0;
       if(err!=0)
       {
         printf("Error when setting fireEvent : %d\n", err);
@@ -225,7 +228,6 @@ void *turretThread(void *vargp)
   while(1==1)
   {
     //Waiting for signal of others threads.
-    //TODO add the cond when the pi is hit.
     pthread_cond_wait(&fireEvent, &fire);
     switch (fireValue)
     {

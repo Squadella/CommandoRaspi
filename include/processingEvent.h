@@ -49,17 +49,15 @@
 ///Use the newer ALSA API.
 #define ALSA_PCM_NEW_HW_PARAMS_API
 
-
-#include <linux/joystick.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <alsa/asoundlib.h>
 #include <math.h>
 #include <pthread.h>
+#include <linux/joystick.h>
+#include <alsa/asoundlib.h>
 #include <wiringPi.h>
-
 
 ///Flag for knowing if the raspi has been hit.
 int touchedByLaser;
