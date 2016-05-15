@@ -17,7 +17,8 @@ int main()
   pthread_cond_init(&upperServoEvent, NULL);
   pthread_cond_init(&lowerServoEvent, NULL);
 
-
+  //Initialising the GPIO pins
+  setupGPIOPins();
 
   //Initialising main threads
   pthread_t solarArrayThreadID;

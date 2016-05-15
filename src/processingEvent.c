@@ -5,14 +5,23 @@
 */
 #include "processingEvent.h"
 
-void setupLaser()
+void setupGPIOPins()
 {
   if(wiringPiSetup()==-1)
   {
     printf("failed to open the gpio pins\n");
     exit(-1);
   }
-  pinMode (25, OUTPUT);
+  //Setting up laser pin
+  pinMode(LASERPIN, OUTPUT);
+  //Setting up motor 1
+  pinMode(ENABLEMOTOR1, OUTPUT);
+  pinMode(MOTOR1ENTRY1, OUTPUT);
+  pinMode(MOTOR1ENTRY2, OUTPUT);
+  //Setting up motor 2
+  pinMode(ENABLEMOTOR2, OUTPUT);
+  pinMode(MOTOR2ENTRY1, OUTPUT);
+  pinMode(MOTOR2ENTRY2, OUTPUT);
 }
 
 int convertAnalogToAngle(__s16 analogValue)
@@ -168,9 +177,9 @@ void *fireThread(void *vargp)
   fflush(stdout);
   canBeFired=0;
   remainingAmmo--;
-  digitalWrite (25, HIGH);
+  digitalWrite (LASERPIN, HIGH);
   sleep(1);
-  digitalWrite (25, LOW);
+  digitalWrite (LASERPIN, LOW);
   sleep(1);
   canBeFired=1;
   pthread_mutex_unlock(&isFiring);
@@ -209,7 +218,6 @@ void *turretThread(void *vargp)
 {
   //Initialisation phase
   pthread_mutex_lock(&initTurret);
-  setupLaser();
   upperServoAngleCurrentAngle=250;
   pthread_mutex_unlock(&initTurret);
 
@@ -322,6 +330,7 @@ void *joystickThread(void *vargp)
   pthread_mutex_lock(&initJoystick);
   //Initialising the controller
   int joystick=open("/dev/input/js0", O_RDONLY | O_NONBLOCK);
+  //int upButtonPressed=0, downButtonPressed=0, leftButtonPressed=0, rightButtonPressed=0;
   if(joystick==-1)
   {
     printf("Check if the joystick is connected\n");
@@ -430,7 +439,6 @@ void *joystickThread(void *vargp)
         case 6:
           if(event.value==1 && upperServoAllreadyMoving==0)
           {
-            printf("Servo start going down\n");
             upperServoAllreadyMoving=1;
             upperServoDirection=0;
             upperServoCond=0;
@@ -438,11 +446,9 @@ void *joystickThread(void *vargp)
             {
               pthread_cond_signal(&upperServoEvent);
             }
-            printf("Signaled\n");
           }
           else if(event.value==0 && upperServoAllreadyMoving==1)
           {
-            printf("Stoped.\n");
             upperServoAllreadyMoving=0;
             upperServoDirection=3;
           }
@@ -463,6 +469,70 @@ void *joystickThread(void *vargp)
           ;
           eventValue=event.value;
           pthread_create(&lowerServoThreadID, NULL, lowerServoThread, (void*)servoblaster);
+          break;
+
+        //Up and down for wheels
+        case 5:
+          //Vehicle is going forward
+          if(event.value==-32767)
+          {
+            //upButtonPressed=1;
+            digitalWrite(ENABLEMOTOR1, 1);
+            digitalWrite(MOTOR1ENTRY1, 1);		//GPIOA=HIGH
+            digitalWrite(MOTOR1ENTRY2, 0);		//GPIOB=LOW
+            digitalWrite(ENABLEMOTOR2, 1);
+            digitalWrite(MOTOR2ENTRY1, 1);		//GPIOA=HIGH
+            digitalWrite(MOTOR2ENTRY2, 0);		//GPIOB=LOW
+          }
+          //Vehicle is going backward
+          else if(event.value==32767)
+          {
+            //downButtonPressed=1;
+            digitalWrite(ENABLEMOTOR1, 1);
+            digitalWrite(MOTOR1ENTRY1, 0);		//GPIOA=HIGH
+            digitalWrite(MOTOR1ENTRY2, 1);		//GPIOB=LOW
+            digitalWrite(ENABLEMOTOR2, 1);
+            digitalWrite(MOTOR2ENTRY1, 0);		//GPIOA=HIGH
+            digitalWrite(MOTOR2ENTRY2, 1);		//GPIOB=LOW
+          }
+          //Stoping the car
+          else
+          {
+            //upButtonPressed=0;
+            //downButtonPressed=0;
+            digitalWrite(ENABLEMOTOR1, 0);
+            digitalWrite(ENABLEMOTOR2, 0);
+          }
+          break;
+
+        //Left and right
+        case 4:
+          //Vehicle going left
+          if(event.value==-32767)
+          {
+            //TODO trouver les moteurs correspondant pour tourner a droite ou a gauche.
+            digitalWrite(ENABLEMOTOR1, 1);
+            digitalWrite(MOTOR1ENTRY1, 0);		//GPIOA=HIGH
+            digitalWrite(MOTOR1ENTRY2, 1);		//GPIOB=LOW
+            digitalWrite(ENABLEMOTOR2, 1);
+            digitalWrite(MOTOR2ENTRY1, 1);		//GPIOA=HIGH
+            digitalWrite(MOTOR2ENTRY2, 0);		//GPIOB=LOW
+          }
+          //Vehicle going right
+          else if(event.value==32767)
+          {
+            digitalWrite(ENABLEMOTOR1, 1);
+            digitalWrite(MOTOR1ENTRY1, 1);		//GPIOA=HIGH
+            digitalWrite(MOTOR1ENTRY2, 0);		//GPIOB=LOW
+            digitalWrite(ENABLEMOTOR2, 1);
+            digitalWrite(MOTOR2ENTRY1, 0);		//GPIOA=HIGH
+            digitalWrite(MOTOR2ENTRY2, 1);		//GPIOB=LOW
+          }
+          else
+          {
+            digitalWrite(ENABLEMOTOR1, 0);
+            digitalWrite(ENABLEMOTOR2, 0);
+          }
           break;
       }
       break;

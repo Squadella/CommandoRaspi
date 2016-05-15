@@ -8,38 +8,24 @@
 #define TIME_DELAY 100
 ///Define a step value.
 #define STEPVALUE 1000
-///Define the id of the X button on the controller.
-#define X 0
-///Define the id of the A button on the controller.
-#define A 1
-///Define the id of the Y button on the controller.
-#define Y 2
-///Define the id of the B button on the controller.
-#define B 3
-///Define the id of the left axis in vertical.
-#define LEFT_JOYSTICK_VERTICAL 0
-///Define the id of the left axis in horizontal.
-#define LEFT_JOYSTICK_HORIZONTAL 1
-///Define the id of the right axis in vertical.
-#define RIGHT_JOYSTICK_VERTICAL 2
-///Define the id of the right axis in horizontal.
-#define RIGHT_JOYSTICK_HORIZONTAL 3
-///Define the id of the horizontal arrows.
-#define HORIZONTAL 4
-///Define the id of the vertical arrows.
-#define VERTICAL 5
-///Define the id of the start button.
-#define START 9
-///Define the id of the back button.
-#define BACK 8
-///Define the id of the left button.
-#define LB 4
-///Define the id of the left trigger.
-#define LT 6
-///Define the id of the right button.
-#define RB 5
-///Define the id of the right trigger.
-#define RT 7
+///Define the pin used by the laser.
+#define LASERPIN 25
+
+//First motor constants
+///Define the enabling pin for motor number 1.
+#define ENABLEMOTOR1 7
+///Define the first entry of the first motor.
+#define MOTOR1ENTRY1 0
+///Define the second entry of the first motor.
+#define MOTOR1ENTRY2 3
+
+//Second motor constants
+///Define the enabling pin for the second motor.
+#define ENABLEMOTOR2 6
+///Define the first entry of the second motor.
+#define MOTOR2ENTRY1 4
+///Define the second entry of the second motor.
+#define MOTOR2ENTRY2 5
 #endif
 
 #ifndef PROCESSINGEV
@@ -68,7 +54,7 @@ int score;
 
 
 ///Initialise the gpio pin for the laser.
-void setupLaser();
+void setupGPIOPins();
 
 ///Used to convert the value returned by the analog to an angle for the servos.
 int convertAnalogToAngle(__s16 analogValue/*!<The value returned by the axis.*/);
