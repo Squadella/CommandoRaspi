@@ -19,6 +19,7 @@ int main()
 
   //Initialising the GPIO pins
   setupGPIOPins();
+  openSpeaker(&audioHandle);
 
   //Initialising main threads
   pthread_t solarArrayThreadID;

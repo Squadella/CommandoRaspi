@@ -51,6 +51,7 @@ int touchedByLaser;
 int remainingAmmo;
 ///The number of time the player has been touched.
 int score;
+snd_pcm_t *audioHandle;
 
 
 ///Initialise the gpio pin for the laser.
@@ -67,6 +68,10 @@ void setNewServoAngle(int angle/*!<Angle between 60 and 250*/,
 
 ///Open and read the microphone.
 void openMicrophone(snd_pcm_t **captureHandle/*!<The handle for accessing the microphone.*/);
+
+void openSpeaker(snd_pcm_t **audioHandle);
+
+void playSound(snd_pcm_t *audioHandle);
 
 ///Function for the square root of the sum of the audio buffer.
 double rms(short *buffer/*!<The audio captured from the microphone.*/,

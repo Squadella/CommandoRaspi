@@ -80,6 +80,99 @@ void openMicrophone(snd_pcm_t **captureHandle)
   *captureHandle=handle;
 }
 
+void openSpeaker(snd_pcm_t **audioHandle)
+{
+  snd_pcm_hw_params_t *params;
+  snd_pcm_uframes_t frames;
+  int rc, dir;
+  unsigned int val;
+  /* Open PCM device for playback. */
+  rc = snd_pcm_open(audioHandle, "hw:1", SND_PCM_STREAM_PLAYBACK, 0);
+  if (rc < 0) {
+    fprintf(stderr, "unable to open pcm device: %s\n", snd_strerror(rc));
+    exit(1);
+  }
+
+  /* Allocate a hardware parameters object. */
+  snd_pcm_hw_params_alloca(&params);
+
+  /* Fill it in with default values. */
+  snd_pcm_hw_params_any(*audioHandle, params);
+
+  /* Set the desired hardware parameters. */
+
+  /* Interleaved mode */
+  snd_pcm_hw_params_set_access(*audioHandle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
+
+  /* Signed 16-bit little-endian format */
+  snd_pcm_hw_params_set_format(*audioHandle, params, SND_PCM_FORMAT_S16_LE);
+
+  /* Two channels (stereo) */
+  snd_pcm_hw_params_set_channels(*audioHandle, params, 2);
+
+  /* 44100 bits/second sampling rate (CD quality) */
+  val = 44100;
+  snd_pcm_hw_params_set_rate_near(*audioHandle, params, &val, &dir);
+
+  /* Set period size to 32 frames. */
+  frames = 32;
+  snd_pcm_hw_params_set_period_size_near(*audioHandle, params, &frames, &dir);
+
+  /* Write the parameters to the driver */
+  rc = snd_pcm_hw_params(*audioHandle, params);
+  if (rc < 0) {
+    fprintf(stderr, "unable to set hw parameters: %s\n", snd_strerror(rc));
+    exit(1);
+  }
+
+  /* Use a buffer large enough to hold one period */
+  snd_pcm_hw_params_get_period_size(params, &frames, &dir);
+}
+
+void playSound(snd_pcm_t *audioHandle)
+{
+  int size;
+  char *buffer;
+  int loops, rc;
+  unsigned int val = 44100;
+  snd_pcm_uframes_t frames=32;
+  size = 32 * 4; /* 2 bytes/sample, 2 channels */
+  buffer = (char *) malloc(size);
+
+  loops = 5000000 / val;
+  int fd=open("sin", O_RDONLY);
+  if(fd<0)
+  {
+    printf("Can't open sin.\n");
+    exit(-1);
+  }
+
+  while (loops > 0) {
+    loops--;
+    rc = read(fd, buffer, size);
+    if (rc == 0) {
+      fprintf(stderr, "end of file on input\n");
+      break;
+    } else if (rc != size) {
+      fprintf(stderr,
+              "short read: read %d bytes\n", rc);
+    }
+    rc = snd_pcm_writei(audioHandle, buffer, frames);
+    if (rc == -EPIPE) {
+      /* EPIPE means underrun */
+      fprintf(stderr, "underrun occurred\n");
+      snd_pcm_prepare(audioHandle);
+    } else if (rc < 0) {
+      fprintf(stderr,
+              "error from writei: %s\n",
+              snd_strerror(rc));
+    }  else if (rc != (int)frames) {
+      fprintf(stderr,
+              "short write, write %d frames\n", rc);
+    }
+  }
+}
+
 double rms(short *buffer, int buffer_size)
 {
 	int i;
@@ -208,7 +301,13 @@ void *touchedThread(void *vargp)
   pthread_mutex_unlock(&isFiring);
   printf("TOUCHED PLS WAIT.");
   fflush(stdout);
-  sleep(3);
+  int i=0;
+  while (i<3)
+  {
+    playSound(audioHandle);
+    sleep(1);
+    i++;
+  }
   touchedByLaser=0;
   return NULL;
 }
